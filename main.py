@@ -1,6 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from config import BOT_TOKEN, PORT, SUDO_USERS
+from config import BOT_TOKEN, API_ID, API_HASH, PORT, SUDO_USERS
 import os
 import sys
 import asyncio
@@ -15,7 +15,12 @@ async def web_server():
     await web.TCPSite(runner, '0.0.0.0', PORT).start()
 
 # Pyrogram client
-app = Client("my_bot", bot_token=BOT_TOKEN)
+app = Client(
+    "my_bot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
 
 # Restart handler
 async def restart(_, message: Message):
