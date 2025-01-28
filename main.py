@@ -52,9 +52,12 @@ CHAT_ID = -1001566660231
 ALIVE_MESSAGE = "Bot is alive!"
 
 @app.on_startup
-async def send_alive_message():
-    await app.send_message(CHAT_ID, ALIVE_MESSAGE)
-    logging.info("Alive message sent to chat!")
+async def startup():
+    try:
+        await app.send_message(CHAT_ID, ALIVE_MESSAGE)
+        logging.info("Alive message sent to chat!")
+    except Exception as e:
+        logging.error(f"Error sending alive message: {e}")
 
 # Run the bot and web server
 if __name__ == "__main__":
