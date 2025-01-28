@@ -1,5 +1,4 @@
-aiohttp
-dnspython
-pymongo
-python-dotenv
-python-telegram-bot
+pyrogram==2.0.28
+motor==3.0.0
+pymongo==4.0.2
+python-dotenv==0.20.0
