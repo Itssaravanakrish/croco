@@ -5,6 +5,13 @@ import os
 import sys
 import asyncio
 from aiohttp import web
+import logging
+import logging.config
+
+# Get logging configurations
+logging.config.fileConfig('logging.conf')
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
 # Web server
 async def web_server():
@@ -36,4 +43,5 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop)
     loop.run_until_complete(web_server())
     app.run()
+    logging.info("Bot is running!")
 
