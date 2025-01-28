@@ -22,3 +22,11 @@ if not SUDO_USERS:
 PORT = getenv('PORT')
 if not PORT:
     raise ValueError("PORT is not set")
+
+API_ID = getenv('API_ID')
+if not API_ID:
+    raise ValueError("API_ID is not set")
+
+API_HASH = getenv('API_HASH')
+if not API_HASH:
+    raise ValueError("API_HASH is not set")
