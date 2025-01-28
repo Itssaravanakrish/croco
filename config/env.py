@@ -23,10 +23,10 @@ PORT = getenv('PORT')
 if not PORT:
     raise ValueError("PORT is not set")
 
-API_ID = getenv('API_ID')
+API_ID = int(getenv('API_ID', '1779071'))
 if not API_ID:
-    raise ValueError("API_ID is not set")
+raise ValueError("API_ID is not set")
 
-API_HASH = getenv('API_HASH')
+API_HASH = getenv('API_HASH', '3448177952613312689f44b9d909b5d3')
 if not API_HASH:
-    raise ValueError("API_HASH is not set")
+raise ValueError("API_HASH is not set")
