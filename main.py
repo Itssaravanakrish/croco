@@ -39,8 +39,22 @@ async def restart(_, message: Message):
     logging.info("Bot is restarting...")
     os.execl(sys.argv[0], *sys.argv)
 
+# Alive handler
+async def alive(_, message: Message):
+    await message.reply_text("Bot is alive!")
+
 # Add handlers
 app.add_handler(filters.command("r", prefixes="/") & filters.user(SUDO_USERS), restart)
+app.add_handler(filters.command("alive", prefixes="/"), alive)
+
+# Send alive message to specific chat on startup
+CHAT_ID = -1001566660231
+ALIVE_MESSAGE = "Bot is alive!"
+
+@app.on_startup
+async def send_alive_message():
+    await app.send_message(CHAT_ID, ALIVE_MESSAGE)
+    logging.info("Alive message sent to chat!")
 
 # Run the bot and web server
 if __name__ == "__main__":
