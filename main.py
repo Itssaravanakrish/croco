@@ -33,6 +33,7 @@ app.add_handler(filters.command("r", prefixes="/") & filters.user(SUDO_USERS), r
 # Run the bot and web server
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(app.start())
     loop.run_until_complete(web_server())
+    loop.run_until_complete(app.start())
     app.idle()
+
