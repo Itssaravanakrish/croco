@@ -69,12 +69,7 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop)
     logging.info("Bot is starting...")
     loop.run_until_complete(web_server())
-    try:
-        app.start()
-    except errors.FloodWait as e:
-        print(f"Flood wait: {e.seconds} seconds")
-        time.sleep(e.seconds + 1)  # wait for the required amount of time
-        app.start()
+    app.start()
     loop.run_until_complete(startup())
     app.idle()
     app.stop()
