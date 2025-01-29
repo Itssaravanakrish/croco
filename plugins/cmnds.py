@@ -128,4 +128,4 @@ async def abort_callback(_, message: Message):
         try:
             await chats.update(message.chat.id, message.chat.title)
         except Exception as e:
-            print(f"Error handling user guess: {e}")
+            print(f"Error updating chat title: {e}")
