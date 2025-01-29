@@ -1,5 +1,6 @@
 from typing import Callable
-from pyrogram import Client, Message, CallbackQuery
+from pyrogram import Client
+from pyrogram.types import Message, CallbackQuery
 import logging
 
 def admin_only(handler: Callable):
