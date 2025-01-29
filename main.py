@@ -18,12 +18,15 @@ logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
 # Web server
 async def web_server():
-    app = web.Application()
-    app.router.add_get('/', lambda request: web.Response(text="Web server is running"))
-    runner = web.AppRunner(app)
-    await runner.setup()
-    await web.TCPSite(runner, '0.0.0.0', PORT).start()
-    logging.info("Web server is running!")
+    try:
+        app = web.Application()
+        app.router.add_get('/', lambda request: web.Response(text="Web server is running"))
+        runner = web.AppRunner(app)
+        await runner.setup()
+        await web.TCPSite(runner, '0.0.0.0', PORT).start()
+        logging.info("Web server is running!")
+    except Exception as e:
+        logging.error(f"Error starting web server: {e}")
 
 # Pyrogram client
 app = Client(
@@ -65,6 +68,8 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop)
     logging.info("Bot is starting...")
     loop.run_until_complete(web_server())
-    app.run()
+    app.start()
     loop.run_until_complete(startup())
+    app.idle()
+    app.stop()
     logging.info("Bot is running!")
