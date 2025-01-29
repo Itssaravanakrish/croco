@@ -1,6 +1,6 @@
-
 from typing import Union
 from motor.motor_asyncio import AsyncIOMotorCollection
+from . import database
 
 collection: AsyncIOMotorCollection = database.chats
 
@@ -8,8 +8,7 @@ async def get(chat_id: int) -> Union[dict, bool]:
     try:
         return await collection.find_one({'chat_id': chat_id}) or False
     except Exception as e:
-        print(f"Error retrieving chat data: {e}")
-        return False
+        raise ValueError(f"Error retrieving chat data: {e}")
 
 async def update(chat_id: int, title: str) -> bool:
     try:
@@ -31,15 +30,16 @@ async def update(chat_id: int, title: str) -> bool:
             })
         return True
     except Exception as e:
-        print(f"Error updating chat data: {e}")
-        return False
+        raise ValueError(f"Error updating chat data: {e}")
 
 async def top_ten() -> Union[list, bool]:
     try:
-        find = await collection.find().sort('games', -1).limit(10).to_list(None)
-        if not find:
-            return False
-        return [{'chat_id': item['chat_id'], 'games': item['games']} for item in find]
+        pipeline = [
+            {'$sort': {'games': -1}},
+            {'$limit': 10},
+            {'$project': {'_id': 0, 'chat_id': 1, 'games': 1}}
+        ]
+        result = await collection.aggregate(pipeline).to_list(None)
+        return result
     except Exception as e:
-        print(f"Error retrieving top ten chats: {e}")
-        return False
+        raise ValueError(f"Error retrieving top ten chats: {e}")
