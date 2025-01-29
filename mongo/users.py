@@ -1,5 +1,6 @@
 from typing import Union
 from motor.motor_asyncio import AsyncIOMotorCollection
+from . import database
 
 collection: AsyncIOMotorCollection = database.users
 
