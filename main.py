@@ -72,8 +72,8 @@ if __name__ == "__main__":
     try:
         app.start()
     except errors.FloodWait as e:
-        print(f"Flood wait: {e.x} seconds")
-        time.sleep(e.x + 1)  # wait for the required amount of time
+        print(f"Flood wait: {e.seconds} seconds")
+        time.sleep(e.seconds + 1)  # wait for the required amount of time
         app.start()
     loop.run_until_complete(startup())
     app.idle()
