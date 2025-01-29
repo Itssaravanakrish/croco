@@ -8,7 +8,7 @@ from aiohttp import web
 import logging
 import pathlib
 
-Logging configuration
+# Logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
-Web server
+# Web server
 async def web_server():
     app = web.Application()
     app.router.add_get('/', lambda request: web.Response(text="Web server is running"))
@@ -25,7 +25,7 @@ async def web_server():
     await web.TCPSite(runner, '0.0.0.0', PORT).start()
     logging.info("Web server is running!")
 
-Pyrogram client
+# Pyrogram client
 app = Client(
     "my_bot",
     api_id=API_ID,
@@ -34,21 +34,21 @@ app = Client(
     plugins=dict(root=pathlib.Path(__file__).parent)
 )
 
-Restart handler
+# Restart handler
 async def restart(_, message: Message):
     await message.reply_text("Restarting...")
     logging.info("Bot is restarting...")
     os.execl(sys.argv[0], *sys.argv)
 
-Alive handler
+# Alive handler
 async def alive(_, message: Message):
     await message.reply_text("Bot is alive!")
 
-Add handlers
+# Add handlers
 app.add_handler(filters.command("r", prefixes="/") & filters.user(SUDO_USERS), restart)
 app.add_handler(filters.command("alive", prefixes="/"), alive)
 
-Send alive message to specific chat on startup
+# Send alive message to specific chat on startup
 CHAT_ID = -1001566660231
 ALIVE_MESSAGE = "Bot is alive!"
 
@@ -59,7 +59,7 @@ async def startup():
     except Exception as e:
         logging.error(f"Error sending alive message: {e}")
 
-Run the bot and web server
+# Run the bot and web server
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
