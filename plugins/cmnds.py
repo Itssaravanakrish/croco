@@ -129,5 +129,3 @@ async def abort_callback(_, message: Message):
             await chats.update(message.chat.id, message.chat.title)
         except Exception as e:
             print(f"Error updating chat title: {e}")
-
-#end
