@@ -109,6 +109,7 @@ async def guess_callback(_, message: Message):
     except Exception as e:
         logging.error(f"Error handling user guess: {e}")
 
+
 @Client.on_message(filters.command("abort"))
 @nice_errors
 async def abort_callback(_, message: Message):
@@ -122,4 +123,6 @@ async def abort_callback(_, message: Message):
         try:
             await chats.update(message.chat.id, message.chat.title)
         except Exception as e:
-            logging.error(f"Error handling abort command: {e}")
+            logging.error(f"Error updating chat title: {e}")
+    except Exception as e:
+        logging.error(f"Error handling abort command: {e}")
