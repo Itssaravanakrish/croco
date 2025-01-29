@@ -1,4 +1,4 @@
-from pyrogram import Client, filters
+from pyrogram import Client, filters, errors
 from pyrogram.types import Message
 from config import BOT_TOKEN, API_ID, API_HASH, PORT, SUDO_USERS
 import os
@@ -7,6 +7,7 @@ import asyncio
 from aiohttp import web
 import logging
 import pathlib
+import time
 
 # Logging configuration
 logging.basicConfig(
@@ -68,7 +69,12 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop)
     logging.info("Bot is starting...")
     loop.run_until_complete(web_server())
-    app.start()
+    try:
+        app.start()
+    except errors.FloodWait as e:
+        print(f"Flood wait: {e.x} seconds")
+        time.sleep(e.x + 1)  # wait for the required amount of time
+        app.start()
     loop.run_until_complete(startup())
     app.idle()
     app.stop()
