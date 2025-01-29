@@ -1,6 +1,3 @@
-Here is the complete code with the enums:
-
-
 from pyrogram import filters, Client
 from pyrogram.types import (
     InlineKeyboardMarkup,
