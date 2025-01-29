@@ -34,7 +34,7 @@ app = Client(
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    plugins=dict(root=pathlib.Path(__file__).parent.as_posix())
+    plugins=dict(root='plugins')
 )
 
 # Restart handler
