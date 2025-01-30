@@ -1,4 +1,4 @@
-from pyrogram import Client, filters, errors
+from pyrogram import Client, filters, errors, idle
 from pyrogram.types import Message
 from config import BOT_TOKEN, API_ID, API_HASH, PORT, SUDO_USERS
 import os
@@ -69,6 +69,7 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop)
     logging.info("Bot is starting...")
     loop.run_until_complete(web_server())
+    app.start()  # Start the client
     loop.run_until_complete(startup())
-    app.run()  # Start and run the client
+    app.idle()  # Keep the client running
     logging.info("Bot is running!")
