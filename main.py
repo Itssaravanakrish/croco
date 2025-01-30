@@ -56,7 +56,6 @@ app.add_handler(filters.command("alive", prefixes="/"), alive)
 CHAT_ID = -1001566660231
 ALIVE_MESSAGE = "Bot is alive!"
 
-@app.on_start
 async def startup():
     try:
         await app.send_message(CHAT_ID, ALIVE_MESSAGE)
@@ -71,5 +70,5 @@ if __name__ == "__main__":
     logging.info("Bot is starting...")
     loop.run_until_complete(web_server())
     loop.run_until_complete(startup())
-    app.start()
+    app.run()  # Start and run the client
     logging.info("Bot is running!")
