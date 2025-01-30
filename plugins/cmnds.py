@@ -11,12 +11,11 @@ from helpers.game import (
     new_game,
     next_word,
     is_true,
-    end_game,  # Import the end_game function
+    end_game,
 )
 from helpers.wrappers import nice_errors, admin_only
 from mongo import users, chats
 from main import app
-
 import logging
 
 # Define inline keyboard markup as a separate variable
@@ -24,35 +23,21 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     [
         [
             InlineKeyboardButton(
-                "View", callback_data="view",
+                "View",
+                callback_data="view",
             ),
         ],
         [
             InlineKeyboardButton(
-                "Next", callback_data="next",
+                "Next",
+                callback_data="next",
             ),
         ],
     ]
 )
 
-# Define handlers separately
-scores_handler = app.on_message(filters.command("scores") & filters.group)
-start_handler = app.on_message(filters.command("start") & filters.group)
-view_handler = app.on_callback_query(filters.regex("view"))
-next_handler = app.on_callback_query(filters.regex("next"))
-guess_handler = app.on_message(filters.text & filters.incoming & filters.group)
-abort_handler = app.on_message(filters.command("abort") & filters.incoming & filters.group)
-
-# Add handlers separately
-app.add_handler(scores_handler)
-app.add_handler(start_handler)
-app.add_handler(view_handler)
-app.add_handler(next_handler)
-app.add_handler(guess_handler)
-app.add_handler(abort_handler)
-
 # Define the handler functions
-@app.on_message(scores_handler)
+@app.on_message(filters.command("scores") & filters.group)
 @nice_errors
 @admin_only
 async def scores_callback(_, message: Message):
@@ -70,7 +55,7 @@ async def scores_callback(_, message: Message):
         parse_mode="HTML",
     )
 
-@app.on_message(start_handler)
+@app.on_message(filters.command("start") & filters.group)
 @nice_errors
 async def start_callback(_, message: Message):
     """Handle the '/start' command in a group chat. Start a new game and update the database with the chat details."""
@@ -84,7 +69,7 @@ async def start_callback(_, message: Message):
         reply_markup=inline_keyboard_markup,
     )
 
-@app.on_callback_query(view_handler)
+@app.on_callback_query(filters.regex("view"))
 @nice_errors
 async def view_callback(_, callback_query: CallbackQuery):
     """Handle the 'view' button press in a game. If the user is the host, send the game word as an alert. Otherwise, send a message indicating that the button is not for them."""
@@ -94,7 +79,7 @@ async def view_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@app.on_callback_query(next_handler)
+@app.on_callback_query(filters.regex("next"))
 @nice_errors
 async def next_callback(_, callback_query: CallbackQuery):
     """Handle the 'next' button press in a game. If the user is the host, send the next word as an alert. Otherwise, send a message indicating that the button is not for them."""
@@ -105,7 +90,7 @@ async def next_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@app.on_message(guess_handler)
+@app.on_message(filters.text & filters.incoming & filters.group)
 @nice_errors
 async def guess_callback(_, message: Message):
     """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
@@ -129,8 +114,7 @@ async def guess_callback(_, message: Message):
     except Exception as e:
         logging.error(f"Error handling user guess: {e}")
 
-
-@app.on_message(abort_handler)
+@app.on_message(filters.command("abort") & filters.incoming & filters.group)
 @nice_errors
 async def abort_callback(_, message: Message):
     """Handle the '/abort' command. Abort the current game."""
@@ -143,6 +127,4 @@ async def abort_callback(_, message: Message):
         try:
             await chats.update(message.chat.id, message.chat.title)
         except Exception as e:
-            logging.error(f"Error updating chat title: {e}")
-    except Exception as e:
-        logging.error(f"Error handling abort command: {e}")
+            logging.error(f"Error handling abort command: {e}")
