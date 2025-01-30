@@ -56,6 +56,7 @@ app.add_handler(filters.command("alive", prefixes="/"), alive)
 CHAT_ID = -1001566660231
 ALIVE_MESSAGE = "Bot is alive!"
 
+@app.on_start
 async def startup():
     try:
         await app.send_message(CHAT_ID, ALIVE_MESSAGE)
