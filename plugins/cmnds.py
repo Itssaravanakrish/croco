@@ -33,7 +33,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-@Client.on_message(filters.command("scores") & filters.chat(chats=ChatType.GROUPS))
+@Client.on_message(filters.command("scores") & filters.group)
 @nice_errors
 @admin_only
 async def scores_callback(_, message: Message):
@@ -51,7 +51,7 @@ async def scores_callback(_, message: Message):
         parse_mode="HTML",
     )
 
-@Client.on_message(filters.command("start") & filters.chat(chats=ChatType.GROUPS))
+@Client.on_message(filters.command("start") & filters.group)
 @nice_errors
 async def start_callback(_, message: Message):
     """Handle the '/start' command in a group chat. Start a new game and update the database with the chat details."""
@@ -86,7 +86,7 @@ async def next_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@Client.on_message(filters.text & ~filters.command & filters.chat(chats=ChatType.GROUPS))
+@Client.on_message(filters.text & ~filters.command & filters.group)
 @nice_errors
 async def guess_callback(_, message: Message):
     """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
@@ -111,7 +111,7 @@ async def guess_callback(_, message: Message):
         logging.error(f"Error handling user guess: {e}")
 
 
-@Client.on_message(filters.command("abort"))
+@Client.on_message(filters.command("abort") & filters.incoming & filters.group)
 @nice_errors
 async def abort_callback(_, message: Message):
     """Handle the '/abort' command. Abort the current game."""
