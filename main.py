@@ -38,6 +38,9 @@ app = Client(
     plugins=dict(root='plugins')
 )
 
+# Load plugins
+app.load_plugins()
+
 # Restart handler
 async def restart(_, message: Message):
     await message.reply_text("Restarting...")
