@@ -33,7 +33,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-@Client.on_message(filters.command("scores") & filters.group)
+@app.on_message(filters.command("scores") & filters.group)
 @nice_errors
 @admin_only
 async def scores_callback(_, message: Message):
@@ -65,7 +65,7 @@ async def start_callback(_, message: Message):
         reply_markup=inline_keyboard_markup,
     )
 
-@Client.on_callback_query(filters.regex("view"))
+@app.on_callback_query(filters.regex("view"))
 @nice_errors
 async def view_callback(_, callback_query: CallbackQuery):
     """Handle the 'view' button press in a game. If the user is the host, send the game word as an alert. Otherwise, send a message indicating that the button is not for them."""
@@ -75,7 +75,7 @@ async def view_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@Client.on_callback_query(filters.regex("next"))
+@app.on_callback_query(filters.regex("next"))
 @nice_errors
 async def next_callback(_, callback_query: CallbackQuery):
     """Handle the 'next' button press in a game. If the user is the host, send the next word as an alert. Otherwise, send a message indicating that the button is not for them."""
@@ -86,7 +86,7 @@ async def next_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@Client.on_message(filters.text & filters.incoming & filters.group)
+@app.on_message(filters.text & filters.incoming & filters.group)
 @nice_errors
 async def guess_callback(_, message: Message):
     """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
@@ -111,7 +111,7 @@ async def guess_callback(_, message: Message):
         logging.error(f"Error handling user guess: {e}")
 
 
-@Client.on_message(filters.command("abort") & filters.incoming & filters.group)
+@app.on_message(filters.command("abort") & filters.incoming & filters.group)
 @nice_errors
 async def abort_callback(_, message: Message):
     """Handle the '/abort' command. Abort the current game."""
