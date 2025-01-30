@@ -46,12 +46,14 @@ app = Client(
 app.load_plugins()
 
 # Restart handler
+@app.on_message(filters.command("r", prefixes="/") & filters.user(SUDO_USERS))
 async def restart(_, message: Message) -> None:
     await message.reply_text("Restarting...")
     logging.info("Bot is restarting...")
     os.execl(sys.argv[0], *sys.argv)
 
 # Alive handler
+@app.on_message(filters.command("alive", prefixes="/"))
 async def alive(_, message: Message) -> None:
     await message.reply_text("Bot is alive!")
 
