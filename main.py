@@ -9,6 +9,10 @@ import logging
 import pathlib
 import time
 
+# Constants
+CHAT_ID = -1001566660231
+ALIVE_MESSAGE = "Bot is alive!"
+
 # Logging configuration
 logging.basicConfig(
     level=logging.INFO,
@@ -42,24 +46,17 @@ app = Client(
 app.load_plugins()
 
 # Restart handler
-async def restart(_, message: Message):
+async def restart(_, message: Message) -> None:
     await message.reply_text("Restarting...")
     logging.info("Bot is restarting...")
     os.execl(sys.argv[0], *sys.argv)
 
 # Alive handler
-async def alive(_, message: Message):
+async def alive(_, message: Message) -> None:
     await message.reply_text("Bot is alive!")
 
-# Add handlers
-app.add_handler(filters.command("r", prefixes="/") & filters.user(SUDO_USERS), restart)
-app.add_handler(filters.command("alive", prefixes="/"), alive)
-
 # Send alive message to specific chat on startup
-CHAT_ID = -1001566660231
-ALIVE_MESSAGE = "Bot is alive!"
-
-async def startup():
+async def startup() -> None:
     try:
         await app.send_message(CHAT_ID, ALIVE_MESSAGE)
         logging.info("Alive message sent to chat!")
