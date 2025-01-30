@@ -70,5 +70,5 @@ if __name__ == "__main__":
     logging.info("Bot is starting...")
     loop.run_until_complete(web_server())
     loop.run_until_complete(startup())
-    app.run()
+    app.start()
     logging.info("Bot is running!")
