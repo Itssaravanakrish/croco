@@ -69,7 +69,7 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop)
     logging.info("Bot is starting...")
     loop.run_until_complete(web_server())
-    app.start()  # Start the client
     loop.run_until_complete(startup())
-    app.idle()  # Keep the client running
+    app.start()
     logging.info("Bot is running!")
+    idle()
