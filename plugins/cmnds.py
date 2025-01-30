@@ -13,7 +13,7 @@ from helpers.game import (
     is_true,
     end_game,  # Import the end_game function
 )
-from helpers.wrappers import nice_errors
+from helpers.wrappers import nice_errors, admin_only
 from mongo import users, chats
 import logging
 
