@@ -15,6 +15,8 @@ from helpers.game import (
 )
 from helpers.wrappers import nice_errors, admin_only
 from mongo import users, chats
+from main import app
+
 import logging
 
 # Define inline keyboard markup as a separate variable
