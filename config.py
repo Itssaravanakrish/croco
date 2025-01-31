@@ -15,13 +15,13 @@ if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN is not set")
 
 # Retrieve the MongoDB URI from environment variables
-MONGO_URI = getenv('MONGO_URI')
+MONGO_URI = getenv('MONGO_URI', 'mongodb+srv://BooksBot:BooksBot@cluster0.qtujn.mongodb.net/?retryWrites=true&w=majority')
 if not MONGO_URI:
     logging.error("MONGO_URI is not set")
     raise ValueError("MONGO_URI is not set")
 
 # Retrieve the MongoDB database name from environment variables
-MONGO_DB_NAME = getenv('MONGO_DB_NAME')
+MONGO_DB_NAME = getenv('MONGO_DB_NAME', 'crocogame')
 if not MONGO_DB_NAME:
     logging.error("MONGO_DB_NAME is not set")
     raise ValueError("MONGO_DB_NAME is not set")
@@ -39,13 +39,13 @@ if PORT <= 0:
     raise ValueError("PORT must be a positive integer")
 
 # Retrieve the API ID from environment variables
-API_ID = int(getenv('API_ID'))
+API_ID = int(getenv('API_ID', '1779071'))
 if not API_ID:
     logging.error("API_ID is not set")
     raise ValueError("API_ID is not set")
 
 # Retrieve the API hash from environment variables
-API_HASH = getenv('API_HASH')
+API_HASH = getenv('API_HASH', '3448177952613312689f44b9d909b5d3')
 if not API_HASH:
     logging.error("API_HASH is not set")
     raise ValueError("API_HASH is not set")
