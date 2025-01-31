@@ -7,6 +7,7 @@ from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
 import pyrogram
 import asyncio
+
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
     pass
