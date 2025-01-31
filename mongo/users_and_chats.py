@@ -1,4 +1,4 @@
-# mongo/database.py
+# mongo/users_and_chats.py
 
 import logging
 from typing import Dict, Any, Optional
@@ -14,12 +14,23 @@ class ChatNotFoundError(Exception):
     """Custom exception for chat not found errors."""
     pass
 
+class DatabaseConnectionError(Exception):
+    """Custom exception for database connection errors."""
+    pass
+
 class Database:
     def __init__(self, uri: str, database_name: str):
         self.client = AsyncIOMotorClient(uri)
-        self.db = self.client[database_name]
-        self.users_collection: AsyncIOMotorCollection = self.db.users
-        self.chats_collection: AsyncIOMotorCollection = self.db.chats
+        self.database = self.client[database_name]
+        self.users_collection: AsyncIOMotorCollection = self.database.users
+        self.chats_collection: AsyncIOMotorCollection = self.database.chats
+        logging.info(f"Connected to MongoDB at {uri}, database: {database_name}")
+
+    async def connect(self):
+        """Establish a connection to the MongoDB database."""
+        # This method can be used to check the connection or perform any setup if needed
+        if self.client is None:
+            raise DatabaseConnectionError("Database connection is not established.")
 
     def new_user(self, user_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new user dictionary."""
@@ -79,15 +90,8 @@ class Database:
             logging.error(f"Failed to get chat {chat_id}: {e}")
             raise
 
-    async def delete_chat(self, chat_id: str) -> None:
-        """Delete a chat from the database."""
-        try:
-            result = await self.chats_collection.delete_one({"chat_id": chat_id})
-            if result.deleted_count == 0:
-                raise ChatNotFoundError(f"Chat with ID {chat_id} not found.")
-        except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            logging.error(f"Failed to delete chat {chat_id}: {e}")
-            raise
+    async def close(self) -> None:
+        """Close the database connection."""
+        self.client.close()
+        logging.info("Database connection closed.") ### Key Changes Made to `users_and_chats.py`
 
-# Initialize the database
-db = Database(MONGO_URI, MONGO_DB_NAME)
