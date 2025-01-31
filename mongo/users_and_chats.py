@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
-from config.env import MONGO_URI, MONGO_DB_NAME
+from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
 
 class UserNotFoundError(Exception):
