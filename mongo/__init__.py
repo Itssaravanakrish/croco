@@ -1,7 +1,7 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from config import MONGO_URI, MONGO_DB_NAME
+# __init__.py
 
-client = AsyncIOMotorClient(MONGO_URI)
-database = client[MONGO_DB_NAME]
+from .mongo import MongoDB
+from .users import Users
+from .chats import Chats
 
-
+__all__ = ["MongoDB", "Users", "Chats"]
