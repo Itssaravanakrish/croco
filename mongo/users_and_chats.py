@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
+import pyrogram
 
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
@@ -86,6 +87,15 @@ class Database:
     # Game management methods
     async def set_game(self, chat_id: str, game_data: Dict[str, Any]) -> None:
         """Set the game state for a chat."""
+        # Convert the host User object to a dictionary
+        if 'host' in game_data and isinstance(game_data['host'], pyrogram.types.User):
+            game_data['host'] = {
+                'id': game_data['host'].id,
+                'first_name': game_data['host'].first_name,
+                'username': game_data['host'].username,
+                # Add any other fields you want to store
+            }
+        
         await self.games_collection.update_one(
             {"chat_id": chat_id},
             {"$set": game_data},
@@ -101,5 +111,14 @@ class Database:
         """Delete the game state for a chat."""
         await self.games_collection.delete_one({"chat_id": chat_id})
 
-# Create a database instance
-db = Database(MONGO_URI, MONGO_DB_NAME)
+# Example usage
+if __name__ == "__main__":
+    import asyncio
+
+    async def main():
+        db = Database(MONGO_URI, MONGO_DB_NAME)
+        await db.connect()
+        # Add more operations as needed
+        await db.close()
+
+    asyncio.run(main())
