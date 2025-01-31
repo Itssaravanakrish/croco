@@ -1,6 +1,6 @@
 from pyrogram import Client, filters, errors, idle
 from pyrogram.types import Message
-from config import BOT_TOKEN, API_ID, API_HASH, PORT, SUDO_USERS
+from config.env import BOT_TOKEN, API_ID, API_HASH, PORT, SUDO_USERS
 import os
 import sys
 import asyncio
