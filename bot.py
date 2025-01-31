@@ -1,17 +1,17 @@
 import logging
 import logging.config
-from pyrogram import Client 
+from pyrogram import Client
 from config import API_ID, API_HASH, BOT_TOKEN, PORT
 from aiohttp import web
 from plugins.web_support import web_server
+from mongo import MongoDB  # Import the MongoDB class
 
+# Configure logging
 logging.config.fileConfig('logging.conf')
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
-
 class Bot(Client):
-
     def __init__(self):
         super().__init__(
             name="Tamil-corobot",
@@ -22,22 +22,23 @@ class Bot(Client):
             plugins={"root": "plugins"},
             sleep_threshold=5,
         )
+        self.mongo_db = MongoDB()  # Initialize MongoDB connection
 
     async def start(self):
-       await super().start()
-       me = await self.get_me()
-       self.mention = me.mention
-       self.username = me.username 
-       app = web.AppRunner(await web_server())
-       await app.setup()
-       bind_address = "0.0.0.0"
-       await web.TCPSite(app, bind_address, PORT).start()
-       logging.info(f"{me.first_name} ✅✅ BOT started successfully ✅✅")
-      
+        await super().start()  # Start the bot
+        me = await self.get_me()  # Get bot information
+        self.mention = me.mention  # Store mention format
+        self.username = me.username  # Store username
+        app = web.AppRunner(await web_server())  # Initialize the web server
+        await app.setup()  # Set up the web server
+        bind_address = "0.0.0.0"  # Bind to all interfaces
+        await web.TCPSite(app, bind_address, PORT).start()  # Start the web server
+        logging.info(f"{me.first_name} ✅✅ BOT started successfully ✅✅")
 
     async def stop(self, *args):
-      await super().stop()      
-      logging.info("Bot Stopped 🙄")
-        
+        await super().stop()  # Stop the bot
+        logging.info("Bot Stopped 🙄")
+
+# Create an instance of the Bot and run it
 bot = Bot()
 bot.run()
