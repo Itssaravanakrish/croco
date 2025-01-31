@@ -6,4 +6,4 @@ aiohttp>=3.8.0
 python-telegram-bot>=20.0a1
 schedule>=1.1.0
 TgCrypto
-https://github.com/pyrogram/pyrogram/archive/master.zip
+git+https://github.com/pyrogram/pyrogram.git@master#egg=pyrogram
