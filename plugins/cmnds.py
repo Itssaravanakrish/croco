@@ -83,7 +83,11 @@ async def next_callback(_, callback_query: CallbackQuery):
         await callback_query.answer("This is not for you.", show_alert=True)
 
 @Client.on_message(filters.text & filters.group)
+@nice_errors
 async def guess_callback(bot, message):
+    await guess_callback_impl(bot, message)
+
+async def guess_callback_impl(bot, message):
     logging.info(f"Received message from {message.from_user.id}")
     try:
         game = get_game(message)
@@ -91,7 +95,7 @@ async def guess_callback(bot, message):
             if await is_true(message.text, message):
                 await message.reply_text(
                     f"<b>{message.from_user.mention_html()} guessed the correct word, {game['word']}.</b>",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("👏 Well Done!", url="https://t.me/TamilBots")]]),
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("👏 Well Done!", url="https://t.me/your_channel")]]),
                     parse_mode="HTML",
                 )
                 try:
