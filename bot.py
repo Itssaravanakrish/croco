@@ -1,10 +1,11 @@
 import logging
 import logging.config
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT  # Updated import for config
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME  # Updated import for config
 from aiohttp import web
 from plugins.web_support import web_server
 from mongo import MongoDB  # Import the MongoDB class
+from users_and_chats import Users, Chats  # Import Users and Chats classes
 
 # Configure logging with error handling
 try:
@@ -28,11 +29,19 @@ class Bot(Client):
             plugins={"root": "plugins"},
             sleep_threshold=5,
         )
+        self.mongo_db = None  # Initialize MongoDB connection variable
+
+        # Initialize MongoDB connection
         try:
             self.mongo_db = MongoDB()  # Initialize MongoDB connection
+            logging.info("MongoDB connection established successfully.")
         except Exception as e:
             logging.error(f"Failed to initialize MongoDB: {e}")
             exit(1)  # Exit if MongoDB initialization fails
+
+        # Create instances of Users and Chats
+        self.users = Users(self.mongo_db)  # Pass the MongoDB instance
+        self.chats = Chats(self.mongo_db)  # Pass the MongoDB instance
 
     async def start(self):
         try:
@@ -40,6 +49,20 @@ class Bot(Client):
             me = await self.get_me()  # Get bot information
             self.mention = me.mention  # Store mention format
             self.username = me.username  # Store username
+
+            # Example usage of Users and Chats
+            await self.users.add_user("123", {"name": "John Doe"})
+            logging.info("User  added successfully: 123")
+
+            user = await self.users.get_user("123")
+            logging.info(f"Retrieved user: {user}")
+
+            await self.chats.add_chat("456", {"title": "General Chat"})
+            logging.info("Chat added successfully: 456")
+
+            chat = await self.chats.get_chat("456")
+            logging.info(f"Retrieved chat: {chat}")
+
             app = web.AppRunner(await web_server())  # Initialize the web server
             await app.setup()  # Set up the web server
             bind_address = "0.0.0.0"  # Bind to all interfaces
