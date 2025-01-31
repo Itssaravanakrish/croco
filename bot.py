@@ -1,7 +1,7 @@
 import logging
 import logging.config
 from pyrogram import Client
-from config.env import API_ID, API_HASH, BOT_TOKEN, PORT  # Updated import for config
+from config import API_ID, API_HASH, BOT_TOKEN, PORT  # Updated import for config
 from aiohttp import web
 from plugins.web_support import web_server
 from mongo import MongoDB  # Import the MongoDB class
