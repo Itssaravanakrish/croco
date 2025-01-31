@@ -1,10 +1,10 @@
 import logging
 import logging.config
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME  # Import MONGO_URI and MONGO_DB_NAME
 from aiohttp import web
 from plugins.web_support import web_server
-from mongo.users_and_chats import Database
+from mongo.users_and_chats import Database  # Import the Database class
 
 # Configure logging with error handling
 try:
@@ -28,7 +28,7 @@ class Bot(Client):
             plugins={"root": "plugins"},
             sleep_threshold=5,
         )
-        self.database = Database()  # Initialize the Database connection
+        self.database = Database(MONGO_URI, MONGO_DB_NAME)  # Pass the URI and database name
 
     async def start(self):
         try:
