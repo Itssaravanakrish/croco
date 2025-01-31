@@ -27,7 +27,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-@Client.on_message(filters.group & filters.command("scores", CMD))
+@Client.on_message(filters.group & filters.command("score", CMD))
 @nice_errors
 @admin_only
 async def scores_callback(client, message):
