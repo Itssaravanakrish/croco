@@ -1,7 +1,7 @@
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
-from config import MONGO_URI, MONGO_DB_NAME
+from config.env import MONGO_URI, MONGO_DB_NAME
 
 class DatabaseConnectionError(Exception):
     """Custom exception for database connection errors."""
