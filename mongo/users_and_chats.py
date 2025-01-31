@@ -3,13 +3,17 @@ from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
-
+from .mongo import MongoDB
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
     pass
+
 class Users:
-    def __init__(self, db: AsyncIOMotorCollection):
-        self.db = db  # Reference to the MongoDB database
+    def __init__(self):
+        self.db = MongoDB().get_database()  # Assuming you have a method to get the database
+        self.collection = self.db.get_collection('users')
+        if self.collection is None:
+            self.collection = self.db.create_collection('users')  # Create the collection if it doesn't exist
 
     async def add_user(self, user_id: str, user_data: Dict[str, Any]) -> None:
         """Add a new user to the database."""
@@ -39,11 +43,13 @@ class Users:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             logging.error(f"Failed to delete user {user_id}: {e}")
             raise
-
 class Chats:
-    def __init__(self, db: AsyncIOMotorCollection):
-        self.db = db  # Reference to the MongoDB database
-
+    def __init__(self):
+        self.db = MongoDB().get_database()  # Assuming you have a method to get the database
+        self.collection = self.db.get_collection('chats')
+        if self.collection is None:
+            self.collection = self.db.create_collection('chats')  # Create the collection if it doesn't exist 
+            
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
         """Add a new chat to the database."""
         try:
