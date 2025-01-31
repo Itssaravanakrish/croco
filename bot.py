@@ -5,7 +5,7 @@ from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME  
 from aiohttp import web
 from plugins.web_support import web_server
 from mongo import MongoDB  # Import the MongoDB class
-from users_and_chats import Users, Chats  # Import Users and Chats classes
+from .users_and_chats import Users, Chats  # Import Users and Chats classes
 
 # Configure logging with error handling
 try:
