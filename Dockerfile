@@ -14,7 +14,7 @@ RUN apt-get update && \
 COPY requirements.txt .
 
 # Install the Python dependencies specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Copy the rest of the application code into the working directory
 COPY . .
