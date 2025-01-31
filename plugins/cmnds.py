@@ -69,6 +69,12 @@ async def start_callback(_, message: Message):
         reply_markup=inline_keyboard_markup,
     )
 
+@Client.on_message(filters.command(["alive"]))
+@nice_errors
+async def alive_callback(_, message: Message):
+    """Handle the '/alive' command. Send a message indicating that the bot is alive."""
+    await message.reply_text("I'm alive!")
+
 @Client.on_callback_query(filters.regex("view"))
 @nice_errors
 async def view_callback(_, callback_query: CallbackQuery):
