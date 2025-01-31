@@ -1,10 +1,8 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
 from config.env import MONGO_URI, MONGO_DB_NAME
-from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
-
-class UserNotFoundError(Exception):
+from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
     pass
 
@@ -53,7 +51,7 @@ class Chats:
             logging.error(f"Failed to add chat {chat_id}: {e}")
             raise
 
-    async def get_chat(self, chat_id: str) -> Dict[str, Any]:
+    async def get_chat(self, chat_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a chat from the database."""
         try:
             return await self.db.chats.find_one({"chat_id": chat_id})
