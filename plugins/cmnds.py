@@ -64,7 +64,7 @@ async def check_alive(_, message):
         "Hᴇʟʟᴏ Bᴜᴅᴅʏ I Aᴍ Aʟɪᴠᴇ : 𝖧𝗂𝗍 /start \n𝖧𝗂𝗍 /help 𝖥𝗈𝗋 𝖧𝖾𝗅𝗉 \n\n𝖧𝗂𝗍 /ping 𝖳𝗈 𝖢𝗁𝖾𝖼𝗄 𝖡𝗈𝗍 𝖯𝗂𝗇𝗀 😁"
     )
 
-@app.on_callback_query(filters.regex("view"))
+@Client.on_callback_query(filters.regex("view"))
 @nice_errors
 async def view_callback(_, callback_query: CallbackQuery):
     """Handle the 'view' button press in a game. If the user is the host, send the game word as an alert. Otherwise, send a message indicating that the button is not for them."""
