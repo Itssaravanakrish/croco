@@ -30,7 +30,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 @Client.on_message(filters.group & filters.command("scores", CMD))
 @nice_errors
 @admin_only
-async def scores_callback(_, message: Message):
+async def scores_callback(client, message):
     """Handle the '/scores' command. Send the user's total scores and scores in the current chat."""
     user_id = message.from_user.id
     chat_id = message.chat.id
@@ -46,8 +46,7 @@ async def scores_callback(_, message: Message):
     )
 
 @Client.on_message(filters.command("start") & filters.group)
-@nice_errors
-async def start_callback(_, message: Message):
+async def start_callback(client, message):
     """Handle the '/start' command in a group chat. Start a new game and update the database with the chat details."""
     await new_game(message.from_user)
     try:
@@ -60,8 +59,7 @@ async def start_callback(_, message: Message):
     )
 
 @Client.on_message(filters.command("alive", CMD))
-@nice_errors
-async def check_alive(_, message: Message):
+async def check_alive(_, message):
     await message.reply_text(
         "Hᴇʟʟᴏ Bᴜᴅᴅʏ I Aᴍ Aʟɪᴠᴇ : 𝖧𝗂𝗍 /start \n𝖧𝗂𝗍 /help 𝖥𝗈𝗋 𝖧𝖾𝗅𝗉 \n\n𝖧𝗂𝗍 /ping 𝖳𝗈 𝖢𝗁𝖾𝖼𝗄 𝖡𝗈𝗍 𝖯𝗂𝗇𝗀 😁"
     )
@@ -89,7 +87,7 @@ async def next_callback(_, callback_query: CallbackQuery):
 
 @Client.on_message(filters.text & filters.group)
 @nice_errors
-async def guess_callback(_, message: Message):
+async def guess_callback(bot, message):
     """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
     try:
         game = get_game(message)
@@ -113,7 +111,7 @@ async def guess_callback(_, message: Message):
 
 @Client.on_message(filters.command("end", CMD))
 @nice_errors
-async def end_callback(_, message: Message):
+async def end_callback(client, message):
     """Handle the '/end' command. End the current game."""
     try:
         await end_game(message)
