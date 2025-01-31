@@ -16,8 +16,8 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-def make_sure_in_game(client: Client, message: Message) -> bool:
-    game = db.get_game(message.chat.id)  # Use the database instance to get the game
+async def make_sure_in_game(client: Client, message: Message) -> bool:
+    game = await db.get_game(message.chat.id)  # Await the database call
     if game:
         if (time() - game['start']) >= 300:
             end_game(client, message)
@@ -25,8 +25,8 @@ def make_sure_in_game(client: Client, message: Message) -> bool:
         return True
     raise Exception('There is no game going on.')
 
-def make_sure_not_in_game(client: Client, message: Message) -> bool:
-    game = db.get_game(message.chat.id)  # Use the database instance to get the game
+async def make_sure_not_in_game(client: Client, message: Message) -> bool:
+    game = await db.get_game(message.chat.id)  # Await the database call
     if game:
         if (time() - game['start']) >= 300:
             end_game(client, message)
@@ -35,20 +35,20 @@ def make_sure_not_in_game(client: Client, message: Message) -> bool:
     return True
 
 def requires_game_running(func):
-    def wrapper(client: Client, message: Message, *args, **kwargs):
-        make_sure_in_game(client, message)
-        return func(client, message, *args, **kwargs)
+    async def wrapper(client: Client, message: Message, *args, **kwargs):
+        await make_sure_in_game(client, message)  # Await the function call
+        return await func(client, message, *args, **kwargs)  # Await the wrapped function
     return wrapper
 
 def requires_game_not_running(func):
-    def wrapper(client: Client, message: Message, *args, **kwargs):
-        make_sure_not_in_game(client, message)
-        return func(client, message, *args, **kwargs)
+    async def wrapper(client: Client, message: Message, *args, **kwargs):
+        await make_sure_not_in_game(client, message)  # Await the function call
+        return await func(client, message, *args, **kwargs)  # Await the wrapped function
     return wrapper
 
 @requires_game_not_running
-def new_game(client: Client, message: Message) -> bool:
-    db.set_game(message.chat.id, {  # Use the database instance to set the game
+async def new_game(client: Client, message: Message) -> bool:
+    await db.set_game(message.chat.id, {  # Await the database call
         'start': time(),
         'host': message.from_user,
         'word': choice(),
@@ -56,32 +56,35 @@ def new_game(client: Client, message: Message) -> bool:
     return True
 
 @requires_game_running
-def get_game(client: Client, message: Message) -> dict:
-    return db.get_game(message.chat.id)  # Use the database instance to get the game
+async def get_game(client: Client, message: Message) -> dict:
+    return await db.get_game(message.chat.id)  # Await the database call
 
 @requires_game_running
-def next_word(client: Client, message: Message) -> str:
-    game = get_game(client, message)
+async def next_word(client: Client, message: Message) -> str:
+    game = await get_game(client, message)  # Await the function call
     game['word'] = choice()
-    db.set_game(message.chat.id, game)  # Use the database instance to update the game
+    await db.set_game(message.chat.id, game)  # Await the database call
     return game['word']
 
 @requires_game_running
-def is_true(client: Client, message: Message, word: str) -> bool:
-    game = get_game(client, message)
+async def is_true(client: Client, message: Message, word: str) -> bool:
+    game = await get_game(client, message)  # Await the function call
     if game['word'] == word.lower():
         end_game(client, message)
         return True
     return False
 
-def end_game(client: Client, message: Message) -> bool:
-    if db.get_game(message.chat.id):  # Use the database instance to check the game
+async def end_game(client: Client, message: Message) -> bool:
+    if await db.get_game(message.chat.id):  # Await the database call
         try:
-            db.delete_game(message.chat.id)  # Use the database instance to delete the game
+            await db.delete_game(message.chat.id)  # Await the database call
             return True
         except Exception as e:
             raise Exception(f"Error ending the game: {e}")
     return False
+
+# The rest of your command handlers remain unchanged
+
 
 @Client.on_message(filters.group & filters.command("score", CMD))
 @admin_only
