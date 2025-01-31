@@ -1,4 +1,3 @@
-from main import app
 from pyrogram import filters, Client
 from pyrogram.types import (
     InlineKeyboardMarkup,
@@ -17,30 +16,18 @@ from helpers.game import (
 from helpers.wrappers import nice_errors, admin_only
 from mongo import users, chats
 import logging
+from typing import Union
 
 CMD = ["/", "."]
 
-# Define inline keyboard markup as a separate variable
 inline_keyboard_markup = InlineKeyboardMarkup(
     [
-        [
-            InlineKeyboardButton(
-                "View",
-                callback_data="view",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "Next",
-                callback_data="next",
-            ),
-        ],
+        [InlineKeyboardButton("View", callback_data="view")],
+        [InlineKeyboardButton("Next", callback_data="next")],
     ]
 )
 
-# Define the handler functions
-
-@Client.on_message(filters.group & filters.command(['scores']))
+@Client.on_message(filters.group & filters.command("scores", CMD))
 @nice_errors
 @admin_only
 async def scores_callback(_, message: Message):
@@ -58,7 +45,7 @@ async def scores_callback(_, message: Message):
         parse_mode="HTML",
     )
 
-@app.on_message(filters.group & filters.command(['start']))
+@Client.on_message(filters.command("start") & filters.group)
 @nice_errors
 async def start_callback(_, message: Message):
     """Handle the '/start' command in a group chat. Start a new game and update the database with the chat details."""
@@ -73,15 +60,18 @@ async def start_callback(_, message: Message):
     )
 
 @Client.on_message(filters.command("alive", CMD))
-async def check_alive(_, message):
-    await message.reply_text("Hᴇʟʟᴏ Bᴜᴅᴅʏ I Aᴍ Aʟɪᴠᴇ : 𝖧𝗂𝗍 /start \n𝖧𝗂𝗍 /help 𝖥𝗈𝗋 𝖧𝖾𝗅𝗉 \n\n𝖧𝗂𝗍 /ping 𝖳𝗈 𝖢𝗁𝖾𝖼𝗄 𝖡𝗈𝗍 𝖯𝗂𝗇𝗀 😁")
+@nice_errors
+async def check_alive(_, message: Message):
+    await message.reply_text(
+        "Hᴇʟʟᴏ Bᴜᴅᴅʏ I Aᴍ Aʟɪᴠᴇ : 𝖧𝗂𝗍 /start \n𝖧𝗂𝗍 /help 𝖥𝗈𝗋 𝖧𝖾𝗅𝗉 \n\n𝖧𝗂𝗍 /ping 𝖳𝗈 𝖢𝗁𝖾𝖼𝗄 𝖡𝗈𝗍 𝖯𝗂𝗇𝗀 😁"
+    )
 
-@Client.on_callback_query(filters.regex("view"))
+@app.on_callback_query(filters.regex("view"))
 @nice_errors
 async def view_callback(_, callback_query: CallbackQuery):
     """Handle the 'view' button press in a game. If the user is the host, send the game word as an alert. Otherwise, send a message indicating that the button is not for them."""
     game = get_game(callback_query)
-    if game["host"].id == callback_query.from_user.id:
+    if game and game["host"].id == callback_query.from_user.id:
         await callback_query.answer(game["word"], show_alert=True)
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
@@ -91,7 +81,7 @@ async def view_callback(_, callback_query: CallbackQuery):
 async def next_callback(_, callback_query: CallbackQuery):
     """Handle the 'next' button press in a game. If the user is the host, send the next word as an alert. Otherwise, send a message indicating that the button is not for them."""
     game = get_game(callback_query)
-    if game["host"].id == callback_query.from_user.id:
+    if game and game["host"].id == callback_query.from_user.id:
         next_word_result = await next_word(callback_query)
         await callback_query.answer(next_word_result, show_alert=True)
     else:
@@ -103,7 +93,7 @@ async def guess_callback(_, message: Message):
     """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
     try:
         game = get_game(message)
-        if game["host"].id != message.from_user.id:
+        if game and game["host"].id != message.from_user.id:
             if await is_true(message.text, message):
                 await message.reply_text(
                     f"{message.from_user.mention_html()} guessed the correct word, {game['word']}.",
@@ -121,14 +111,14 @@ async def guess_callback(_, message: Message):
     except Exception as e:
         logging.error(f"Error handling user guess: {e}")
 
-@Client.on_message(filters.command("abort"))
+@Client.on_message(filters.command("end", CMD))
 @nice_errors
-async def abort_callback(_, message: Message):
-    """Handle the '/abort' command. Abort the current game."""
+async def end_callback(_, message: Message):
+    """Handle the '/end' command. End the current game."""
     try:
         await end_game(message)
         await message.reply_text(
-            f"{message.from_user.mention_html()} aborted the game.",
+            f"{message.from_user.mention_html()} ended the game.",
             reply_markup=inline_keyboard_markup,
         )
         try:
@@ -136,4 +126,4 @@ async def abort_callback(_, message: Message):
         except Exception as e:
             logging.error(f"Error updating chat title: {e}")
     except Exception as e:
-        logging.error(f"Error handling abort command: {e}")
+        logging.error(f"Error handling end command: {e}")
