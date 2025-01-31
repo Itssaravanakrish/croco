@@ -1,23 +1,39 @@
+# mongo/database.py
+
 import logging
 from typing import Dict, Any, Optional
-from motor.motor_asyncio import AsyncIOMotorCollection
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
-from .mongo import MongoDB
 
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
     pass
 
-class Users:
-    def __init__(self, mongo_db: MongoDB):
-        self.db = mongo_db  # Use the passed MongoDB instance
-        self.collection = self.db.get_collection('users')
+class ChatNotFoundError(Exception):
+    """Custom exception for chat not found errors."""
+    pass
+
+class Database:
+    def __init__(self, uri: str, database_name: str):
+        self.client = AsyncIOMotorClient(uri)
+        self.db = self.client[database_name]
+        self.users_collection: AsyncIOMotorCollection = self.db.users
+        self.chats_collection: AsyncIOMotorCollection = self.db.chats
+
+    def new_user(self, user_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new user dictionary."""
+        return {"user_id": user_id, **user_data}
+
+    def new_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new chat dictionary."""
+        return {"chat_id": chat_id, **chat_data}
 
     async def add_user(self, user_id: str, user_data: Dict[str, Any]) -> None:
         """Add a new user to the database."""
+        user = self.new_user(user_id, user_data)
         try:
-            await self.collection.insert_one({"user_id": user_id, **user_data})
+            await self.users_collection.insert_one(user)
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             logging.error(f"Failed to add user {user_id}: {e}")
             raise
@@ -25,7 +41,7 @@ class Users:
     async def get_user(self, user_id: str) -> Dict[str, Any]:
         """Retrieve a user from the database."""
         try:
-            user = await self.collection.find_one({"user_id": user_id})
+            user = await self.users_collection.find_one({"user_id": user_id})
             if user is None:
                 raise UserNotFoundError(f"User  with ID {user_id} not found.")
             return user
@@ -36,22 +52,18 @@ class Users:
     async def delete_user(self, user_id: str) -> None:
         """Delete a user from the database."""
         try:
-            result = await self.collection.delete_one({"user_id": user_id})
+            result = await self.users_collection.delete_one({"user_id": user_id})
             if result.deleted_count == 0:
                 raise UserNotFoundError(f"User  with ID {user_id} not found.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             logging.error(f"Failed to delete user {user_id}: {e}")
             raise
 
-class Chats:
-    def __init__(self, mongo_db: MongoDB):
-        self.db = mongo_db  # Use the passed MongoDB instance
-        self.collection = self.db.get_collection('chats')
-
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
         """Add a new chat to the database."""
+        chat = self.new_chat(chat_id, chat_data)
         try:
-            await self.collection.insert_one({"chat_id": chat_id, **chat_data})
+            await self.chats_collection.insert_one(chat)
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             logging.error(f"Failed to add chat {chat_id}: {e}")
             raise
@@ -59,7 +71,10 @@ class Chats:
     async def get_chat(self, chat_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a chat from the database."""
         try:
-            return await self.collection.find_one({"chat_id": chat_id})
+            chat = await self.chats_collection.find_one({"chat_id": chat_id})
+            if chat is None:
+                raise ChatNotFoundError(f"Chat with ID {chat_id} not found.")
+            return chat
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             logging.error(f"Failed to get chat {chat_id}: {e}")
             raise
@@ -67,9 +82,12 @@ class Chats:
     async def delete_chat(self, chat_id: str) -> None:
         """Delete a chat from the database."""
         try:
-            result = await self.collection.delete_one({"chat_id": chat_id})
+            result = await self.chats_collection.delete_one({"chat_id": chat_id})
             if result.deleted_count == 0:
-                logging.warning(f"Chat with ID {chat_id} not found for deletion.")
+                raise ChatNotFoundError(f"Chat with ID {chat_id} not found.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             logging.error(f"Failed to delete chat {chat_id}: {e}")
             raise
+
+# Initialize the database
+db = Database(MONGO_URI, MONGO_DB_NAME)
