@@ -24,25 +24,22 @@ class Database:
         self.database = self.client[database_name]
         self.users_collection: AsyncIOMotorCollection = self.database.users
         self.chats_collection: AsyncIOMotorCollection = self.database.chats
+        self.games_collection: AsyncIOMotorCollection = self.database.games  # Collection for games
         logging.info(f"Connected to MongoDB at {uri}, database: {database_name}")
 
     async def connect(self):
         """Establish a connection to the MongoDB database."""
-        # This method can be used to check the connection or perform any setup if needed
         if self.client is None:
             raise DatabaseConnectionError("Database connection is not established.")
 
-    def new_user(self, user_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new user dictionary."""
-        return {"user_id": user_id, **user_data}
+    async def close(self) -> None:
+        """Close the database connection."""
+        self.client.close()
+        logging.info("Database connection closed.")
 
-    def new_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new chat dictionary."""
-        return {"chat_id": chat_id, **chat_data}
-
+    # User management methods
     async def add_user(self, user_id: str, user_data: Dict[str, Any]) -> None:
-        """Add a new user to the database."""
-        user = self.new_user(user_id, user_data)
+        user = {"user_id": user_id, **user_data}
         try:
             await self.users_collection.insert_one(user)
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
@@ -50,29 +47,22 @@ class Database:
             raise
 
     async def get_user(self, user_id: str) -> Dict[str, Any]:
-        """Retrieve a user from the database."""
-        try:
-            user = await self.users_collection.find_one({"user_id": user_id})
-            if user is None:
-                raise UserNotFoundError(f"User  with ID {user_id} not found.")
-            return user
-        except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            logging.error(f"Failed to get user {user_id}: {e}")
-            raise
+        user = await self.users_collection.find_one({"user_id": user_id})
+        if user is None:
+            raise UserNotFoundError(f"User  with ID {user_id} not found.")
+        return user
 
-    async def delete_user(self, user_id: str) -> None:
-        """Delete a user from the database."""
-        try:
-            result = await self.users_collection.delete_one({"user_id": user_id})
-            if result.deleted_count == 0:
-                raise UserNotFoundError(f"User  with ID {user_id} not found.")
-        except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            logging.error(f"Failed to delete user {user_id}: {e}")
-            raise
+    async def total_scores(self, user_id: str) -> int:
+        # Implement logic to calculate total scores for the user
+        pass
 
+    async def scores_in_chat(self, chat_id: str, user_id: str) -> int:
+        # Implement logic to calculate scores in a specific chat for the user
+        pass
+
+    # Chat management methods
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
-        """Add a new chat to the database."""
-        chat = self.new_chat(chat_id, chat_data)
+        chat = {"chat_id": chat_id, **chat_data}
         try:
             await self.chats_collection.insert_one(chat)
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
@@ -80,20 +70,36 @@ class Database:
             raise
 
     async def get_chat(self, chat_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve a chat from the database."""
-        try:
-            chat = await self.chats_collection.find_one({"chat_id": chat_id})
-            if chat is None:
-                raise ChatNotFoundError(f"Chat with ID {chat_id} not found.")
-            return chat
-        except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            logging.error(f"Failed to get chat {chat_id}: {e}")
-            raise
+        chat = await self.chats_collection.find_one({"chat_id": chat_id})
+        if chat is None:
+            raise ChatNotFoundError(f"Chat with ID {chat_id} not found.")
+        return chat
 
-    async def close(self) -> None:
-        """Close the database connection."""
-        self.client.close()
-        logging.info("Database connection closed.") ### Key Changes Made to `users_and_chats.py`
+    async def update_chat(self, chat_id: str, chat_title: str) -> None:
+        """Update chat information."""
+        await self.chats_collection.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"title": chat_title}},
+            upsert=True
+        )
+
+    # Game management methods
+    async def set_game(self, chat_id: str, game_data: Dict[str, Any]) -> None:
+        """Set the game state for a chat."""
+        await self.games_collection.update_one(
+            {"chat_id": chat_id},
+            {"$set": game_data},
+            upsert=True  # Create a new document if it doesn't exist
+        )
+
+    async def get_game(self, chat_id: str) -> Optional[Dict[str, Any]]:
+        """Get the game state for a chat."""
+        game = await self.games_collection.find_one({"chat_id": chat_id})
+        return game
+
+    async def delete_game(self, chat_id: str) -> None:
+        """Delete the game state for a chat."""
+        await self.games_collection.delete_one({"chat_id": chat_id})
 
 # Create a database instance
 db = Database(MONGO_URI, MONGO_DB_NAME)
