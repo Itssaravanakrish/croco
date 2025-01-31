@@ -1,7 +1,6 @@
 # __init__.py
 
 from .mongo import MongoDB
-from .users import Users
-from .chats import Chats
+from .users_and_chats import Users, Chats
 
 __all__ = ["MongoDB", "Users", "Chats"]
