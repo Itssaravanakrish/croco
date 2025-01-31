@@ -1,3 +1,5 @@
+# mongo/mongo.py
+
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
@@ -25,7 +27,17 @@ class MongoDB:
     async def get_collection(self, collection_name: str):
         """Get a collection from the database."""
         if self.database:
-            return self.database[collection_name]
+            try:
+                return self.database[collection_name]
+            except Exception as e:
+                logging.error(f"Error retrieving collection {collection_name}: {e}")
+                raise
         else:
             logging.error("Database connection is not established.")
             raise DatabaseConnectionError("Database connection is not established.")
+
+    async def close(self):
+        """Close the connection to the MongoDB database."""
+        if self.client:
+            self.client.close()
+            logging.info("MongoDB connection closed.")
