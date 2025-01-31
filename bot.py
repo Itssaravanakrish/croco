@@ -1,7 +1,7 @@
 import logging
 import logging.config
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME  # Updated import for config
+from config import API_ID, API_HASH, BOT_TOKEN, PORT  # Removed MONGO_URI and MONGO_DB_NAME since they are not needed here
 from aiohttp import web
 from plugins.web_support import web_server
 from mongo.mongo import MongoDB  # Import the MongoDB class
@@ -29,22 +29,13 @@ class Bot(Client):
             plugins={"root": "plugins"},
             sleep_threshold=5,
         )
-        self.mongo_db = None  # Initialize MongoDB connection variable
-
-        # Initialize MongoDB connection
-        try:
-            self.mongo_db = MongoDB()  # Initialize MongoDB connection
-            logging.info("MongoDB connection established successfully.")
-        except Exception as e:
-            logging.error(f"Failed to initialize MongoDB: {e}")
-            exit(1)  # Exit if MongoDB initialization fails
-
-        # Create instances of Users and Chats
+        self.mongo_db = MongoDB()  # Initialize MongoDB connection
         self.users = Users(self.mongo_db)  # Pass the MongoDB instance
         self.chats = Chats(self.mongo_db)  # Pass the MongoDB instance
 
     async def start(self):
         try:
+            await self.mongo_db.connect()  # Ensure MongoDB connection is established
             await super().start()  # Start the bot
             me = await self.get_me()  # Get bot information
             self.mention = me.mention  # Store mention format
@@ -74,6 +65,7 @@ class Bot(Client):
 
     async def stop(self, *args):
         try:
+            await self.mongo_db.close()  # Close the MongoDB connection
             await super().stop()  # Stop the bot
             logging.info("Bot Stopped 🙄")
         except Exception as e:
