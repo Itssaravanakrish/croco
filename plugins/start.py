@@ -5,8 +5,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from pyrogram.enums import ChatType
 from words import choice
 from helpers.wrappers import nice_errors, admin_only
-from mongo import users, chats  # Ensure this imports the correct Users and Chats classes
-# Ensure that the MongoDB connection is properly set up in the mongo module
+from mongo.users_and_chats import db  # Import the database instance
 
 CMD = ["/", "."]
 
@@ -18,7 +17,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 )
 
 def make_sure_in_game(client: Client, message: Message) -> bool:
-    game = client.db.get(message.chat.id, 'game')
+    game = db.get_game(message.chat.id)  # Use the database instance to get the game
     if game:
         if (time() - game['start']) >= 300:
             end_game(client, message)
@@ -27,7 +26,7 @@ def make_sure_in_game(client: Client, message: Message) -> bool:
     raise Exception('There is no game going on.')
 
 def make_sure_not_in_game(client: Client, message: Message) -> bool:
-    game = client.db.get(message.chat.id, 'game')
+    game = db.get_game(message.chat.id)  # Use the database instance to get the game
     if game:
         if (time() - game['start']) >= 300:
             end_game(client, message)
@@ -49,7 +48,7 @@ def requires_game_not_running(func):
 
 @requires_game_not_running
 def new_game(client: Client, message: Message) -> bool:
-    client.db.set(message.chat.id, 'game', {
+    db.set_game(message.chat.id, {  # Use the database instance to set the game
         'start': time(),
         'host': message.from_user,
         'word': choice(),
@@ -58,13 +57,13 @@ def new_game(client: Client, message: Message) -> bool:
 
 @requires_game_running
 def get_game(client: Client, message: Message) -> dict:
-    return client.db.get(message.chat.id, 'game')
+    return db.get_game(message.chat.id)  # Use the database instance to get the game
 
 @requires_game_running
 def next_word(client: Client, message: Message) -> str:
     game = get_game(client, message)
     game['word'] = choice()
-    client.db.set(message.chat.id, 'game', game)
+    db.set_game(message.chat.id, game)  # Use the database instance to update the game
     return game['word']
 
 @requires_game_running
@@ -76,9 +75,9 @@ def is_true(client: Client, message: Message, word: str) -> bool:
     return False
 
 def end_game(client: Client, message: Message) -> bool:
-    if client.db.get(message.chat.id, 'game'):
+    if db.get_game(message.chat.id):  # Use the database instance to check the game
         try:
-            client.db.delete(message.chat.id, 'game')
+            db.delete_game(message.chat.id)  # Use the database instance to delete the game
             return True
         except Exception as e:
             raise Exception(f"Error ending the game: {e}")
@@ -89,9 +88,9 @@ def end_game(client: Client, message: Message) -> bool:
 async def scores_callback(client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
-    total_user_scores = await users.total_scores(user_id)
+    total_user_scores = await db.total_scores(user_id)  # Use the database instance
     scores_in_current_chat = (
-        await users.scores_in_chat(chat_id, user_id)
+        await db.scores_in_chat(chat_id, user_id)  # Use the database instance
         if message.chat.type == ChatType.SUPERGROUP
         else "<code>not in group</code>"
     )
@@ -104,7 +103,7 @@ async def scores_callback(client, message: Message):
 async def start_callback(client, message: Message):
     await new_game(client, message)
     try:
-        await chats.update(message.chat.id, message.chat.title)
+        await db.update_chat(message.chat.id, message.chat.title)  # Use the database instance
     except Exception as e:
         logging.error(f"Error updating database: {e}")
     await message.reply_text(
