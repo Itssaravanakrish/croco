@@ -1,11 +1,12 @@
 from time import time
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ChatType
 from words import choice
 from helpers.wrappers import nice_errors, admin_only
-from mongo import users, chats
-import logging
+from mongo import users, chats  # Ensure this imports the correct Users and Chats classes
+# Ensure that the MongoDB connection is properly set up in the mongo module
 
 CMD = ["/", "."]
 
@@ -85,7 +86,7 @@ def end_game(client: Client, message: Message) -> bool:
 
 @Client.on_message(filters.group & filters.command("score", CMD))
 @admin_only
-async def scores_callback(client, message):
+async def scores_callback(client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
     total_user_scores = await users.total_scores(user_id)
@@ -100,7 +101,7 @@ async def scores_callback(client, message):
     )
 
 @Client.on_message(filters.command("start") & filters.group)
-async def start_callback(client, message):
+async def start_callback(client, message: Message):
     await new_game(client, message)
     try:
         await chats.update(message.chat.id, message.chat.title)
@@ -112,9 +113,9 @@ async def start_callback(client, message):
     )
 
 @Client.on_message(filters.command("alive", CMD))
-async def check_alive(_, message):
+async def check_alive(_, message: Message):
     await message.reply_text(
-        "Hᴇʟʟᴏ Bᴜᴅᴅʏ I Aᴍ Aʟɪ vᴇ Aɴᴅ Rᴇᴀᴅʏ Tᴏ Pʟᴀʏ!"
+        "H eʟʟᴏ Bᴜᴅᴅʏ I Aᴍ Aʟɪ vᴇ Aɴᴅ Rᴇᴀᴅʏ Tᴏ Pʟᴀʏ!"
     )
 
 @Client.on_callback_query(filters.regex("next"))
