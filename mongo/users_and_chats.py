@@ -95,3 +95,5 @@ class Database:
         self.client.close()
         logging.info("Database connection closed.") ### Key Changes Made to `users_and_chats.py`
 
+# Create a database instance
+db = Database(MONGO_URI, MONGO_DB_NAME)
