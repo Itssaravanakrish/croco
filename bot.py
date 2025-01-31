@@ -9,9 +9,9 @@ from mongo import MongoDB  # Import the MongoDB class
 # Configure logging with error handling
 try:
     logging.config.fileConfig('logging.conf')
+    logging.info("Logging configuration loaded successfully.")
 except Exception as e:
     print(f"Error loading logging configuration: {e}")
-    exit(1)  # Exit if logging configuration fails
 
 # Set logging levels
 logging.getLogger().setLevel(logging.INFO)
