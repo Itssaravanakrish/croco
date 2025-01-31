@@ -1,3 +1,4 @@
+from main import app
 from pyrogram import filters, Client
 from pyrogram.types import (
     InlineKeyboardMarkup,
@@ -55,7 +56,7 @@ async def scores_callback(_, message: Message):
         parse_mode="HTML",
     )
 
-@Client.on_message(filters.group & filters.command(['start']))
+@app.on_message(filters.group & filters.command(['start']))
 @nice_errors
 async def start_callback(_, message: Message):
     """Handle the '/start' command in a group chat. Start a new game and update the database with the chat details."""
@@ -69,7 +70,7 @@ async def start_callback(_, message: Message):
         reply_markup=inline_keyboard_markup,
     )
 
-@Client.on_message(filters.command(["alive"]))
+@app.on_message(filters.command(["alive"]))
 @nice_errors
 async def alive_callback(_, message: Message):
     """Handle the '/alive' command. Send a message indicating that the bot is alive."""
@@ -96,7 +97,7 @@ async def next_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@Client.on_message(filters.text & filters.incoming & filters.group)
+@Client.on_message(filters.text & filters.group)
 @nice_errors
 async def guess_callback(_, message: Message):
     """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
