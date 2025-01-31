@@ -112,14 +112,5 @@ class Database:
         """Delete the game state for a chat."""
         await self.games_collection.delete_one({"chat_id": chat_id})
 
-# Example usage
-if __name__ == "__main__":
-    import asyncio
-
-    async def main():
-        db = Database(MONGO_URI, MONGO_DB_NAME)
-        await db.connect()
-        # Add more operations as needed
-        await db.close()
-
-    asyncio.run(main())
+# Create a database instance
+db = Database(MONGO_URI, MONGO_DB_NAME)
