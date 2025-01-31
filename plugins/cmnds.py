@@ -15,7 +15,6 @@ from helpers.game import (
 )
 from helpers.wrappers import nice_errors, admin_only
 from mongo import users, chats
-from main import app
 import logging
 
 # Define inline keyboard markup as a separate variable
@@ -37,7 +36,8 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 )
 
 # Define the handler functions
-@app.on_message(filters.command("scores") & filters.group)
+
+@Client.on_message(filters.group & filters.command(['scores']))
 @nice_errors
 @admin_only
 async def scores_callback(_, message: Message):
@@ -55,7 +55,7 @@ async def scores_callback(_, message: Message):
         parse_mode="HTML",
     )
 
-@app.on_message(filters.command("start") & filters.group)
+@Client.on_message(filters.group & filters.command(['start']))
 @nice_errors
 async def start_callback(_, message: Message):
     """Handle the '/start' command in a group chat. Start a new game and update the database with the chat details."""
@@ -69,7 +69,7 @@ async def start_callback(_, message: Message):
         reply_markup=inline_keyboard_markup,
     )
 
-@app.on_callback_query(filters.regex("view"))
+@Client.on_callback_query(filters.regex("view"))
 @nice_errors
 async def view_callback(_, callback_query: CallbackQuery):
     """Handle the 'view' button press in a game. If the user is the host, send the game word as an alert. Otherwise, send a message indicating that the button is not for them."""
@@ -79,7 +79,7 @@ async def view_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@app.on_callback_query(filters.regex("next"))
+@Client.on_callback_query(filters.regex("next"))
 @nice_errors
 async def next_callback(_, callback_query: CallbackQuery):
     """Handle the 'next' button press in a game. If the user is the host, send the next word as an alert. Otherwise, send a message indicating that the button is not for them."""
@@ -90,7 +90,7 @@ async def next_callback(_, callback_query: CallbackQuery):
     else:
         await callback_query.answer("This is not for you.", show_alert=True)
 
-@app.on_message(filters.text & filters.incoming & filters.group)
+@Client.on_message(filters.text & filters.incoming & filters.group)
 @nice_errors
 async def guess_callback(_, message: Message):
     """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
