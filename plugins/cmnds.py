@@ -18,6 +18,8 @@ from helpers.wrappers import nice_errors, admin_only
 from mongo import users, chats
 import logging
 
+CMD = ["/", "."]
+
 # Define inline keyboard markup as a separate variable
 inline_keyboard_markup = InlineKeyboardMarkup(
     [
@@ -70,11 +72,9 @@ async def start_callback(_, message: Message):
         reply_markup=inline_keyboard_markup,
     )
 
-@app.on_message(filters.command(["alive"]))
-@nice_errors
-async def alive_callback(_, message: Message):
-    """Handle the '/alive' command. Send a message indicating that the bot is alive."""
-    await message.reply_text("I'm alive!")
+@Client.on_message(filters.command("alive", CMD))
+async def check_alive(_, message):
+    await message.reply_text("Hᴇʟʟᴏ Bᴜᴅᴅʏ I Aᴍ Aʟɪᴠᴇ : 𝖧𝗂𝗍 /start \n𝖧𝗂𝗍 /help 𝖥𝗈𝗋 𝖧𝖾𝗅𝗉 \n\n𝖧𝗂𝗍 /ping 𝖳𝗈 𝖢𝗁𝖾𝖼𝗄 𝖡𝗈𝗍 𝖯𝗂𝗇𝗀 😁")
 
 @Client.on_callback_query(filters.regex("view"))
 @nice_errors
