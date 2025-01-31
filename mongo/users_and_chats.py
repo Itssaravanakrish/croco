@@ -111,7 +111,7 @@ class Chats:
         self.collection = collection
 
     async def get(self, chat_id: int) -> Union[dict, bool]:
-        """Retrieve chat data by chat_id """Retrieve chat data by chat_id."""
+        """Retrieve chat data by chat_id."""
         try:
             return await self.collection.find_one({'chat_id': chat_id}) or False
         except Exception as e:
