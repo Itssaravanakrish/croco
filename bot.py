@@ -1,11 +1,10 @@
 import logging
 import logging.config
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT  # Removed MONGO_URI and MONGO_DB_NAME since they are not needed here
+from config import API_ID, API_HASH, BOT_TOKEN, PORT
 from aiohttp import web
 from plugins.web_support import web_server
-from mongo.mongo import MongoDB  # Import the MongoDB class
-from mongo.users_and_chats import Users, Chats  # Use absolute import for Users and Chats classes
+from mongo.users_and_chats import Database
 
 # Configure logging with error handling
 try:
@@ -29,29 +28,27 @@ class Bot(Client):
             plugins={"root": "plugins"},
             sleep_threshold=5,
         )
-        self.mongo_db = MongoDB()  # Initialize MongoDB connection
-        self.users = Users(self.mongo_db)  # Pass the MongoDB instance
-        self.chats = Chats(self.mongo_db)  # Pass the MongoDB instance
+        self.database = Database()  # Initialize the Database connection
 
     async def start(self):
         try:
-            await self.mongo_db.connect()  # Ensure MongoDB connection is established
+            await self.database.connect()  # Ensure MongoDB connection is established
             await super().start()  # Start the bot
             me = await self.get_me()  # Get bot information
             self.mention = me.mention  # Store mention format
             self.username = me.username  # Store username
 
-            # Example usage of Users and Chats
-            await self.users.add_user("123", {"name": "John Doe"})
+            # Example usage of Database
+            await self.database.add_user("123", {"name": "John Doe"})
             logging.info("User  added successfully: 123")
 
-            user = await self.users.get_user("123")
+            user = await self.database.get_user("123")
             logging.info(f"Retrieved user: {user}")
 
-            await self.chats.add_chat("456", {"title": "General Chat"})
+            await self.database.add_chat("456", {"title": "General Chat"})
             logging.info("Chat added successfully: 456")
 
-            chat = await self.chats.get_chat("456")
+            chat = await self.database.get_chat("456")
             logging.info(f"Retrieved chat: {chat}")
 
             app = web.AppRunner(await web_server())  # Initialize the web server
@@ -65,7 +62,7 @@ class Bot(Client):
 
     async def stop(self, *args):
         try:
-            await self.mongo_db.close()  # Close the MongoDB connection
+            await self.database.close()  # Close the MongoDB connection
             await super().stop()  # Stop the bot
             logging.info("Bot Stopped 🙄")
         except Exception as e:
