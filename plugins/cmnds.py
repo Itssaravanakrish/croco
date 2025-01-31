@@ -28,7 +28,6 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 )
 
 @Client.on_message(filters.group & filters.command("score", CMD))
-@nice_errors
 @admin_only
 async def scores_callback(client, message):
     """Handle the '/scores' command. Send the user's total scores and scores in the current chat."""
@@ -65,7 +64,6 @@ async def check_alive(_, message):
     )
 
 @Client.on_callback_query(filters.regex("view"))
-@nice_errors
 async def view_callback(_, callback_query: CallbackQuery):
     """Handle the 'view' button press in a game. If the user is the host, send the game word as an alert. Otherwise, send a message indicating that the button is not for them."""
     game = get_game(callback_query)
@@ -75,7 +73,6 @@ async def view_callback(_, callback_query: CallbackQuery):
         await callback_query.answer("This is not for you.", show_alert=True)
 
 @Client.on_callback_query(filters.regex("next"))
-@nice_errors
 async def next_callback(_, callback_query: CallbackQuery):
     """Handle the 'next' button press in a game. If the user is the host, send the next word as an alert. Otherwise, send a message indicating that the button is not for them."""
     game = get_game(callback_query)
@@ -86,16 +83,16 @@ async def next_callback(_, callback_query: CallbackQuery):
         await callback_query.answer("This is not for you.", show_alert=True)
 
 @Client.on_message(filters.text & filters.group)
-@nice_errors
 async def guess_callback(bot, message):
-    """Handle user guesses in a game. If the user guesses the correct word, update the database and send a reply with an inline keyboard."""
+    logging.info(f"Received message from {message.from_user.id}")
     try:
         game = get_game(message)
         if game and game["host"].id != message.from_user.id:
             if await is_true(message.text, message):
                 await message.reply_text(
-                    f"{message.from_user.mention_html()} guessed the correct word, {game['word']}.",
-                    reply_markup=inline_keyboard_markup,
+                    f"<b>{message.from_user.mention_html()} guessed the correct word, {game['word']}.</b>",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("👏 Well Done!", url="https://t.me/TamilBots")]]),
+                    parse_mode="HTML",
                 )
                 try:
                     await users.update(
@@ -110,7 +107,6 @@ async def guess_callback(bot, message):
         logging.error(f"Error handling user guess: {e}")
 
 @Client.on_message(filters.command("end", CMD))
-@nice_errors
 async def end_callback(client, message):
     """Handle the '/end' command. End the current game."""
     try:
