@@ -2,10 +2,11 @@ import logging
 from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
 from config.env import MONGO_URI, MONGO_DB_NAME
-from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError class UserNotFoundError(Exception):
+from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
+
+class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
     pass
-
 class Users:
     def __init__(self, db: AsyncIOMotorCollection):
         self.db = db  # Reference to the MongoDB database
