@@ -50,7 +50,11 @@ def requires_game_not_running(func):
 async def new_game(client: Client, message: Message) -> bool:
     await db.set_game(message.chat.id, {  # Await the database call
         'start': time(),
-        'host': message.from_user,
+        'host': {
+            'id': message.from_user.id,
+            'first_name': message.from_user.first_name,
+            'username': message.from_user.username,
+        },
         'word': choice(),
     })
     return True
