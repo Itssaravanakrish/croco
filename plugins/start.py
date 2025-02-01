@@ -4,11 +4,11 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ChatType
 from words import choice
-from helpers.wrappers import nice_errors, admin_only
 from mongo.users_and_chats import db  # Import the database instance
 
 CMD = ["/", "."]
 
+# Inline keyboard for the game
 inline_keyboard_markup = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton("See word 👀", callback_data="view"),
@@ -33,11 +33,10 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
         return True
     raise Exception('There is no game going on.')
 
-async def make_sure_not_in_game(client: Client, message: Message) -> bool:
-    game = await db.get_game(message.chat.id)  # Await the database call
+async def make_sure_not_in_game(client, message):
+    game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        raise Exception(f'The game has already started by {message.from_user.mention}.')
-    return True
+        raise Exception(f'The game has already started by {game["host"]["mention"]}.')  # Provide the host's mention
 
 def requires_game_running(func):
     async def wrapper(client: Client, message: Message, *args, **kwargs):
@@ -95,19 +94,25 @@ async def end_game(client: Client, message: Message) -> bool:
     return False
 
 @Client.on_message(filters.group & filters.command("score", CMD))
-@admin_only
-async def scores_callback(client, message: Message):
+async def scores_callback(client: Client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
-    total_user_scores = await db.total_scores(user_id)  # Use the database instance
-    scores_in_current_chat = (
-        await db.scores_in_chat(chat_id, user_id)  # Use the database instance
-        if message.chat.type == ChatType.SUPERGROUP
-        else "<code>not in group</code>"
-    )
-    await message.reply_text(
-        f" Your total scores: {total_user_scores}\nScores in this chat: {scores_in_current_chat}"
-    )
+
+    # Check if the user is an admin or the owner
+    chat_member = await client.get_chat_member(chat_id, user_id)
+
+    if chat_member.status in ["administrator", "creator"]:
+        total_user_scores = await db.total_scores(user_id)  # Use the database instance
+        scores_in_current_chat = (
+            await db.scores_in_chat(chat_id, user_id)  # Use the database instance
+            if message.chat.type == ChatType.SUPERGROUP
+            else "<code>not in group</code>"
+        )
+        await message.reply_text(
+            f"Your total scores: {total_user_scores}\nScores in this chat: {scores_in_current_chat}"
+        )
+    else:
+        await message.reply_text("You don't have permission to do this.")
 
 @Client.on_callback_query(filters.regex("end_game"))
 async def end_game_callback(client: Client, callback_query: CallbackQuery):
@@ -179,11 +184,10 @@ async def check_for_correct_word(client: Client, message: Message):
                 )
 
 @Client.on_message(filters.group & filters.command("alive", CMD))
-async def alive_callback(_, message):
+async def alive_callback(_, message: Message):
     await message.reply_text("I am alive and running! 💪")
 
 @Client.on_message(filters.group & filters.command("end", CMD))
-@admin_only
 async def end_game_callback(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game and game['host']['id'] == message.from_user.id:
