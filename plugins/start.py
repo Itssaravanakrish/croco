@@ -163,7 +163,7 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
 async def start_game(client: Client, message: Message):
     await new_game(client, message)  # Await the function call
     await message.reply_text(
-        "Game started! Use the buttons below to view the word or skip to the next one.",
+        "Game started!,🥳 Use the buttons below to view the word or skip to the next one.",
         reply_markup=inline_keyboard_markup
     )
 
@@ -181,7 +181,7 @@ async def check_for_correct_word(client: Client, message: Message):
                 await message.reply_text(f"Congratulations {message.from_user.mention}, you found the word! Starting a new game...")
                 await new_game(client, message)  # Start a new game with the current user as the host
                 await message.reply_text(
-                    "Game started! Use the buttons below to view the word or skip to the next one.",
+                    "Game started!🥳 Use the buttons below to view the word or skip to the next one.",
                     reply_markup=inline_keyboard_markup
                 )
 
