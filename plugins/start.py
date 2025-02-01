@@ -52,12 +52,14 @@ def requires_game_not_running(func):
 
 @requires_game_not_running
 async def new_game(client: Client, message: Message) -> bool:
+    mention = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
     await db.set_game(message.chat.id, {  # Await the database call
         'start': time(),
         'host': {
             'id': message.from_user.id,
             'first_name': message.from_user.first_name,
             'username': message.from_user.username,
+            'mention': mention,  # Add the mention key
         },
         'word': choice(),
     })
