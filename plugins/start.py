@@ -20,7 +20,7 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
     game = await db.get_game(message.chat.id)  # Await the database call
     if game:
         if (time() - game['start']) >= 300:
-            end_game(client, message)
+            await end_game(client, message)  # Await the end_game function
             raise Exception('The game has ended due to timeout.')
         return True
     raise Exception('There is no game going on.')
@@ -29,7 +29,7 @@ async def make_sure_not_in_game(client: Client, message: Message) -> bool:
     game = await db.get_game(message.chat.id)  # Await the database call
     if game:
         if (time() - game['start']) >= 300:
-            end_game(client, message)
+            await end_game(client, message)  # Await the end_game function
             raise Exception('The game has ended due to timeout.')
         raise Exception('There is a game going on.')
     return True
@@ -70,7 +70,7 @@ async def next_word(client: Client, message: Message) -> str:
 async def is_true(client: Client, message: Message, word: str) -> bool:
     game = await get_game(client, message)  # Await the function call
     if game['word'] == word.lower():
-        end_game(client, message)
+        await end_game(client, message)  # Await the end_game function
         return True
     return False
 
@@ -82,9 +82,6 @@ async def end_game(client: Client, message: Message) -> bool:
         except Exception as e:
             raise Exception(f"Error ending the game: {e}")
     return False
-
-# The rest of your command handlers remain unchanged
-
 
 @Client.on_message(filters.group & filters.command("score", CMD))
 @admin_only
@@ -110,7 +107,6 @@ async def start_callback(client, message: Message):
     except Exception as e:
         logging.error(f"Error updating database: {e}")
 
-    # Use the mention method to get the user's mention
     user_mention = message.from_user.mention  # This will give you the mention in the format @username
     user_first_name = message.from_user.first_name  # Get the user's first name
 
@@ -118,7 +114,7 @@ async def start_callback(client, message: Message):
         f"{user_mention} talks about a word.",
         reply_markup=inline_keyboard_markup,
     )
-    
+
 @Client.on_message(filters.command("alive", CMD))
 async def check_alive(_, message: Message):
     await message.reply_text(
@@ -128,17 +124,17 @@ async def check_alive(_, message: Message):
 @Client.on_callback_query(filters.regex("next"))
 async def next_word_callback(client: Client, callback_query: CallbackQuery):
     message = callback_query.message
-    word = next_word(client, message)
+    word = await next_word(client, message)  # Await the next_word function
     await message.reply_text(f"The next word is: {word}")
 
 @Client.on_callback_query(filters.regex("view"))
 async def view_word_callback(client: Client, callback_query: CallbackQuery):
     message = callback_query.message
-    game = get_game(client, message)
+    game = await get_game(client, message)  # Await the get_game function
     await message.reply_text(f"The current word is: {game['word']}")
 
 @Client.on_message(filters.command("end") & filters.group)
 @requires_game_running
 async def end_game_callback(client, message: Message):
-    end_game(client, message)
+    await end_game(client, message)  # Await the end_game function
     await message.reply_text("The game has ended.")
