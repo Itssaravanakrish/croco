@@ -11,8 +11,16 @@ CMD = ["/", "."]
 
 inline_keyboard_markup = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton("View", callback_data="view")],
-        [InlineKeyboardButton("Next", callback_data="next")],
+        [InlineKeyboardButton("See word 👀", callback_data="view"),
+         InlineKeyboardButton("Next word 🔄", callback_data="next")],
+        [InlineKeyboardButton("I don't want to be a leader🙅‍♂", callback_data="end_game")]
+    ]
+)
+
+# Inline keyboard for when the user opts out of being a leader
+want_to_be_leader_keyboard = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton("I want to be a leader🙋‍♂", callback_data="start_new_game")]
     ]
 )
 
@@ -101,6 +109,29 @@ async def scores_callback(client, message: Message):
         f" Your total scores: {total_user_scores}\nScores in this chat: {scores_in_current_chat}"
     )
 
+@Client.on_callback_query(filters.regex("end_game"))
+async def end_game_callback(client: Client, callback_query: CallbackQuery):
+    game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
+    if game:
+        await end_game(client, callback_query.message)  # End the current game
+        await callback_query.message.edit_reply_markup(want_to_be_leader_keyboard)  # Show the new button
+        await callback_query.answer("The game has been ended. You can now choose to be a leader.", show_alert=True)
+    else:
+        await callback_query.answer("There is no game to end.", show_alert=True)
+
+@Client.on_callback_query(filters.regex("start_new_game"))
+async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
+    game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
+    if game:
+        await end_game(client, callback_query.message)  # End the current game
+    # Start a new game with the user who clicked the button as the host
+    await new_game(client, callback_query.message)  # Start a new game
+    await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
+    await callback_query.message.reply_text(
+        "Game started! Use the buttons below to view the word or skip to the next one.",
+        reply_markup=inline_keyboard_markup
+    )
+
 @Client.on_callback_query(filters.regex("view"))
 async def view_word_callback(client: Client, callback_query: CallbackQuery):
     game = await get_game(client, callback_query.message)  # Await the function call
@@ -134,17 +165,22 @@ async def check_for_correct_word(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
         if message.text.lower() == game['word'].lower():  # Check if the message matches the word
-            await end_game(client, message)  # End the current game
-            await message.reply_text(f"Congratulations {message.from_user.mention}, you found the word! Starting a new game...")
-            await new_game(client, message)  # Start a new game with the current user as the host
-            await message.reply_text(
-                "Game started! Use the buttons below to view the word or skip to the next one.",
-                reply_markup=inline_keyboard_markup
-            )
+            if message.from_user.id == game['host']['id']:  # Check if the host provided the answer
+                # Send a sticker in response
+                await message.reply_sticker("CAACAgUAAyEFAASMPZdPAAEBWjVnnj1fEKVElmmYXzBc828kgDZTQQACNBQAAu9OkFSKgGFg2iVa2R4E")
+                await message.reply_text("Correct! But the game continues...")
+            else:
+                await end_game(client, message)  # End the current game for non-host
+                await message.reply_text(f"Congratulations {message.from_user.mention}, you found the word! Starting a new game...")
+                await new_game(client, message)  # Start a new game with the current user as the host
+                await message.reply_text(
+                    "Game started! Use the buttons below to view the word or skip to the next one.",
+                    reply_markup=inline_keyboard_markup
+                )
 
 @Client.on_message(filters.group & filters.command("alive", CMD))
-async def alive_callback(client: Client, message: Message):
-    await message.reply_text("I am alive and running!")
+async def alive_callback(_, message):
+    await message.reply_text("I am alive and running! 💪")
 
 @Client.on_message(filters.group & filters.command("end", CMD))
 @admin_only
