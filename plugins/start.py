@@ -109,11 +109,16 @@ async def start_callback(client, message: Message):
         await db.update_chat(message.chat.id, message.chat.title)  # Use the database instance
     except Exception as e:
         logging.error(f"Error updating database: {e}")
+
+    # Use the mention method to get the user's mention
+    user_mention = message.from_user.mention  # This will give you the mention in the format @username
+    user_first_name = message.from_user.first_name  # Get the user's first name
+
     await message.reply_text(
-        f"{message.from_user.mention_html()} talks about a word.",
+        f"{user_mention} talks about a word.",
         reply_markup=inline_keyboard_markup,
     )
-
+    
 @Client.on_message(filters.command("alive", CMD))
 async def check_alive(_, message: Message):
     await message.reply_text(
