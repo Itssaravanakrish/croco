@@ -160,12 +160,25 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
 @Client.on_message(filters.group & filters.command("start", CMD))
 @requires_game_not_running
 async def start_game(client: Client, message: Message):
-    await new_game(client, message)  # Await the function call
-    await message.reply_text(
-        "Game started! {message.from_user.mention}  🥳 Use the buttons below to view the word or skip to the next one.",
-        reply_markup=inline_keyboard_markup
-    )
-
+    game = await db.get_game(message.chat.id)  # Check if a game is ongoing
+    if game:
+        # Check if the game has been inactive for more than 5 minutes
+        if (time() - game['start']) >= 300:
+            await end_game(client, message)  # End the current game due to inactivity
+            await new_game(client, message)  # Start a new game
+            await message.reply_text(
+                f"Game has ended due to inactivity. {message.from_user.first_name} 🥳, a new game has started!",
+                reply_markup=inline_keyboard_markup
+            )
+        else:
+            host_name = game["host"]["first_name"]  # Get the host's first name
+            await message.reply_text(f"The game is already started by {host_name}.")  # Notify the user
+    else:
+        await new_game(client, message)  # Start a new game
+        await message.reply_text(
+            f"Game started! {message.from_user.first_name} 🥳 is explain the word.",
+            reply_markup=inline_keyboard_markup
+        )
 @Client.on_message(filters.group)
 async def check_for_correct_word(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
