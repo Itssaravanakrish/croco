@@ -36,8 +36,9 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
 async def make_sure_not_in_game(client, message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        raise Exception(f'The game has already started by {game["host"]["mention"]}.')  # Provide the host's mention
-
+        host_mention = game["host"].get("mention", "Unknown host")  # Use .get() to avoid KeyError
+        raise Exception(f'The game has already started by {host_mention}.')  # Provide the host's mention
+        
 def requires_game_running(func):
     async def wrapper(client: Client, message: Message, *args, **kwargs):
         await make_sure_in_game(client, message)  # Await the function call
