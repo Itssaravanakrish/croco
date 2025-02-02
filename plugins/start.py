@@ -1,5 +1,6 @@
 from time import time
 import logging
+import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ChatType
@@ -36,9 +37,8 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
 async def make_sure_not_in_game(client, message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        host_mention = game["host"].get("mention", "Unknown host")  # Use .get() to avoid KeyError
-        raise Exception(f'The game has already started by {host_mention}.')  # Provide the host's mention
-        
+        raise Exception("The game has already started! Do not blabber. 🤯")  # Simplified message
+
 def requires_game_running(func):
     async def wrapper(client: Client, message: Message, *args, **kwargs):
         await make_sure_in_game(client, message)  # Await the function call
@@ -53,14 +53,12 @@ def requires_game_not_running(func):
 
 @requires_game_not_running
 async def new_game(client: Client, message: Message) -> bool:
-    mention = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
     await db.set_game(message.chat.id, {  # Await the database call
         'start': time(),
         'host': {
             'id': message.from_user.id,
             'first_name': message.from_user.first_name,
             'username': message.from_user.username,
-            'mention': mention,  # Add the mention key
         },
         'word': choice(),
     })
@@ -90,6 +88,7 @@ async def end_game(client: Client, message: Message) -> bool:
         try:
             await db.delete_game(message.chat.id)  # Await the database call
             logging.info(f"Game ended for chat {message.chat.id}.")
+            await message.reply_text("The game has ended.")  # Notify users that the game has ended
             return True
         except Exception as e:
             logging.error(f"Error ending the game: {e}")
@@ -101,8 +100,7 @@ async def scores_callback(client: Client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
 
-    # Check if the user is an admin or the owner
-    chat_member = await client.get_chat_member(chat_id, user_id)
+    # Check if the user is an admin or the owner chat_member = await client.get_chat_member(chat_id, user_id)
 
     if chat_member.status in ["administrator", "creator"]:
         total_user_scores = await db.total_scores(user_id)  # Use the database instance
@@ -164,7 +162,7 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
 async def start_game(client: Client, message: Message):
     await new_game(client, message)  # Await the function call
     await message.reply_text(
-        "Game started!,🥳 Use the buttons below to view the word or skip to the next one.",
+        "Game started! {message.from_user.mention}  🥳 Use the buttons below to view the word or skip to the next one.",
         reply_markup=inline_keyboard_markup
     )
 
@@ -174,7 +172,6 @@ async def check_for_correct_word(client: Client, message: Message):
     if game:
         if message.text.lower() == game['word'].lower():  # Check if the message matches the word
             if message.from_user.id == game['host']['id']:  # Check if the host provided the answer
-                # Send a sticker in response
                 await message.reply_sticker("CAACAgUAAyEFAASMPZdPAAEBWjVnnj1fEKVElmmYXzBc828kgDZTQQACNBQAAu9OkFSKgGFg2iVa2R4E")
                 await message.reply_text("Correct! But the game continues...")
             else:
@@ -182,7 +179,7 @@ async def check_for_correct_word(client: Client, message: Message):
                 await message.reply_text(f"Congratulations {message.from_user.mention}, you found the word! Starting a new game...")
                 await new_game(client, message)  # Start a new game with the current user as the host
                 await message.reply_text(
-                    "Game started!🥳 Use the buttons below to view the word or skip to the next one.",
+                    "Game started!  {message.from_user.mention} 🥳 Use the buttons below to view the word or skip to the next one.",
                     reply_markup=inline_keyboard_markup
                 )
 
