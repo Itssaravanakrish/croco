@@ -134,7 +134,7 @@ async def start_new_game_callback(client: Client, callback_query: CallbackQuery)
     await new_game(client, callback_query.message)  # Start a new game
     await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
     await callback_query.message.reply_text(
-        "Game started! Use the buttons below to view the word or skip to the next one.",
+        "Game started! {message.from_user.mention}  🥳 Use the buttons below to view the word or skip to the next one.",
         reply_markup=inline_keyboard_markup
     )
 
