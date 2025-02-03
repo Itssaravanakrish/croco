@@ -7,6 +7,11 @@ from pyrogram.enums import ChatType
 from words import choice
 from mongo.users_and_chats import db  # Import the database instance
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 CMD = ["/", "."]
 
 # Inline keyboard for the game
@@ -174,13 +179,14 @@ async def view_word_callback(client: Client, callback_query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex("next"))
 async def next_word_callback(client: Client, callback_query: CallbackQuery):
-    game = await get_game(client, callback_query.message)  # Await the function call
-    if game:
-        if callback_query.from_user.id == game['host']['id']:
-            new_word = await next_word(client, callback_query.message)  # Await the function call
-            await callback_query.answer(f"The new word is: {new_word}", show_alert=True)
-        else:
-            await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
+    try:
+        game = await get_game(client, callback_query.message)  # Await the function call
+        if game:
+            if callback_query.from_user.id == game['host']['id']:
+                new_word = await next_word(client, callback_query.message)  # Await the function call
+                await callback_query.answer(f"The new word is: {new_word}", show_alert=True)
+            else:
+                await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
     except Exception as e:
         if str(e) == 'The game has ended due to timeout.':
             await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​🇴​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪.", show_alert=True)
