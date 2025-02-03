@@ -165,9 +165,8 @@ async def start_game(client: Client, message: Message):
         # Check if the game has been inactive for more than 5 minutes
         if (time() - game['start']) >= 300:
             await end_game(client, message)  # End the current game due to inactivity
-            await new_game(client, message)  # Start a new game
             await message.reply_text(
-                f"Game has ended due to inactivity. {message.from_user.first_name} 🥳, a new game has started!",
+                f"Game has ended due to inactivity. {message.from_user.first_name} 🥳, please start a new game with /start.",
                 reply_markup=inline_keyboard_markup
             )
         else:
