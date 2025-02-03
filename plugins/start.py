@@ -7,6 +7,7 @@ from pyrogram.enums import ChatType
 from words import choice
 from mongo.users_and_chats import db  # Import the database instance
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -30,13 +31,6 @@ want_to_be_leader_keyboard = InlineKeyboardMarkup(
     ]
 )
 
-#time out close 
-close_to_be_leader_keyboard = InlineKeyboardMarkup(
-    [
-        [InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 👥", url="https://t.me/Crocodile_game_enBot?startgroup=invite")]
-    ]
-)
-
 # Define the inline keyboard for private messages
 inline_keyboard_markup_pm = InlineKeyboardMarkup(
     [
@@ -49,10 +43,10 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
     game = await db.get_game(message.chat.id)  # Await the database call
     if game:
         if (time() - game['start']) >= 300:
-            await end_game(client, message)  # Await the end_game function
-            raise Exception('The game has ended due to timeout.')
+            await end_game(client, message)  # End the game due to timeout
+            return False  # Indicate that the game has ended
         return True
-    raise Exception('There is no game going on.')
+    return False  # No game is ongoing
 
 async def make_sure_not_in_game(client, message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
@@ -82,17 +76,19 @@ async def new_game(client: Client, message: Message) -> bool:
         },
         'word': choice(),
     })
+    logging.info(f"New game started by {message.from_user.first_name} in chat {message.chat.id}.")
     return True
 
 @requires_game_running
 async def get_game(client: Client, message: Message) -> dict:
-    return await db.get_game(message.chat.id)  # Await the database call
+ return await db.get_game(message.chat.id)  # Await the database call
 
 @requires_game_running
 async def next_word(client: Client, message: Message) -> str:
     game = await get_game(client, message)  # Await the function call
     game['word'] = choice()
     await db.set_game(message.chat.id, game)  # Await the database call
+    logging.info(f"New word set for game in chat {message.chat.id}.")
     return game['word']
 
 @requires_game_running
@@ -108,12 +104,12 @@ async def end_game(client: Client, message: Message) -> bool:
         try:
             await db.delete_game(message.chat.id)  # Await the database call
             logging.info(f"Game ended for chat {message.chat.id}.")
-            await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ᴇɴᴅᴇᴅ ᴅᴜᴇ ᴛᴏ ᴛɪᴍᴇᴏᴜᴛ. ꜱᴛᴀʀᴛ ᴛʜᴇ ɴᴇᴡ ɢᴀᴍᴇ.")  # Notify users that the game has ended
-            return True
+            return True  # Indicate that the game has ended
         except Exception as e:
             logging.error(f"Error ending the game: {e}")
-            raise Exception(f"Error ending the game: {e}")
-    return False
+            await message.reply_text("An error occurred while ending the game. Please try again.")
+            return False  # Indicate that there was an error
+    return False  # No game was found to end
 
 @Client.on_message(filters.group & filters.command("score", CMD))
 async def scores_callback(client: Client, message: Message):
@@ -134,7 +130,7 @@ async def scores_callback(client: Client, message: Message):
             f"Your total scores: {total_user_scores}\nScores in this chat: {scores_in_current_chat}"
         )
     else:
-        await message.reply_text("​🇾​​🇴​​🇺​ ​🇩​​🇴​​🇳​❜​🇹​ ​🇭​​🇦​​🇻​​🇪​ ​🇵​​🇪​​🇷​​🇲​​🇮​​🇸​​🇸​​🇮​​🇴​​🇳​ ​🇹​​🇴​ ​🇩​​🇴​ ​🇹​​🇭​​🇮​​🇸​.")
+        await message.reply_text("​🇾​​🇴​​🇺​ ​🇩​​🇴​​🇳​❜​🇹​ ​🇭​​🇦​​🇻​​🇪​ ​🇵​​🇪​​🇷​​🇲​​🇮​​🇸​​🇸​​🇮​​🇴​​🇳​ ​🇹​​о​ ​🇩​​о​ ​🇹​​н​​🇮​​🇸​.")
 
 @Client.on_callback_query(filters.regex("end_game_now"))
 async def end_game_callback(client: Client, callback_query: CallbackQuery):
@@ -147,18 +143,24 @@ async def end_game_callback(client: Client, callback_query: CallbackQuery):
         else:
             await callback_query.answer("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ. ʏᴏᴜ ᴄᴀɴɴᴏᴛ ᴇɴᴅ ᴛʜᴇ ɢᴀᴍᴇ.", show_alert=True)
     else:
-        await callback_query.answer("​🇹​​🇭​​🇪​​🇷​​🇪​ ​🇮​​🇸​ ​🇳​​🇴​ ​🇬​​🇦​​🇲​​🇪​ ​🇹​​🇴​ ​🇪​​🇳​​🇩​.", show_alert=True)
-        
+        await callback_query.answer("​🇹​​🇭​​🇪​​🇷​​🇪​ ​🇮​​🇸​ ​🇳​​🇴​ ​🇬​​🇦​​🇲​​🇪​ ​🇹​​о​ ​🇪​​🇳​​🇩​.", show_alert=True)
+
 @Client.on_callback_query(filters.regex("start_new_game"))
-async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
+async def start _new_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
     if game:
-        await end_game(client, callback_query.message)  # End the current game
+        # Attempt to end the current game
+        if await end_game(client, callback_query.message):  # End the current game if it exists
+            await callback_query.answer("The previous game has been ended.", show_alert=True)
+        else:
+            await callback_query.answer("An error occurred while ending the previous game.", show_alert=True)
+            return  # Exit if there was an error
+
     # Start a new game with the user who clicked the button as the host
     await new_game(client, callback_query.message)  # Start a new game
     await callback_query.answer("ᴀ ɴᴇᴡ ɢᴀᴍᴇ ʜᴀꜱ ꜱᴛᴀʀᴛᴇᴅ! ʏᴏᴜ ᴀʀᴇ ᴛʜᴇ ʟᴇᴀᴅᴇʀ ɴᴏᴡ.", show_alert=True)
     await callback_query.message.reply_text(
-        "ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
+        f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
         reply_markup=inline_keyboard_markup
     )
 
@@ -173,7 +175,7 @@ async def view_word_callback(client: Client, callback_query: CallbackQuery):
                 await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
     except Exception as e:
         if str(e) == 'The game has ended due to timeout.':
-            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​🇴​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪​.", show_alert=True)
+            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪​.", show_alert=True)
         else:
             await callback_query.answer("An unexpected error occurred.", show_alert=True)
 
@@ -189,7 +191,7 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
                 await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
     except Exception as e:
         if str(e) == 'The game has ended due to timeout.':
-            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​🇴​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪.", show_alert=True)
+            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​ 🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪.", show_alert=True)
         else:
             await callback_query.answer("An unexpected error occurred.", show_alert=True)
 
@@ -197,23 +199,21 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
 async def start_game(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        # Check if the game has been inactive for more than 5 minutes
         if (time() - game['start']) >= 300:
             await end_game(client, message)  # End the current game due to inactivity
-            await message.reply_text(
-                f"ɢᴀᴍᴇ ʜᴀꜱ ᴇɴᴅᴇᴅ ᴅᴜᴇ ᴛᴏ ɪɴᴀᴄᴛɪᴠɪᴛʏ. [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳, ᴘʟᴇᴀꜱᴇ ꜱᴛᴀʀᴛ ᴀ ɴᴇᴡ ɢᴀᴍᴇ ᴡɪᴛʜ.",
-                reply_markup=close_to_be_leader_keyboard
-            )
+            # No notification to the user about the game ending
         else:
             host_name = game["host"]["first_name"]  # Get the host's first name
             await message.reply_text(f"The game is already started by {host_name}.")  # Notify the user
-    else:
-        await new_game(client, message)  # Start a new game
-        await message.reply_text(
-            f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
-            reply_markup=inline_keyboard_markup
-        )
-        
+            return  # Exit if the game is ongoing
+
+    # Start a new game
+    await new_game(client, message)  # Start a new game
+    await message.reply_text(
+        f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
+        reply_markup=inline_keyboard_markup
+    )
+
 @Client.on_message(filters.private & filters.command("start", CMD))
 async def start_private(client: Client, message: Message):
     welcome_message = "Welcome to our advanced Crocodile Game Bot! 🐊\n\n" \
@@ -237,7 +237,7 @@ async def check_for_correct_word(client: Client, message: Message):
                 await message.reply_text(f"ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴꜱ {message.from_user.mention}, ʏᴏᴜ ꜰᴏᴜɴᴅ ᴛʜᴇ ᴡᴏʀᴅ! ꜱᴛᴀʀᴛɪɴɢ ᴀ ɴᴇᴡ ɢᴀᴍᴇ...")
                 await new_game(client, message)  # Start a new game with the current user as the host
                 await message.reply_text(
-                    "ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ!  [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
+                    f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ!  [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
                     reply_markup=inline_keyboard_markup
                 )
 
@@ -246,10 +246,16 @@ async def alive_callback(_, message: Message):
     await message.reply_text("I am alive and running! 💪")
 
 @Client.on_message(filters.group & filters.command("end", CMD))
-async def end_game_callback(client: Client, message: Message):
+async ```python
+def end_game_callback(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
-    if game and game['host']['id'] == message.from_user.id:
-        await end_game(client, message)  # End the current game
-        await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ ʙʏ ᴛʜᴇ ʜᴏꜱᴛ.")
+    if game:
+        if game['host']['id'] == message.from_user.id:  # Check if the user is the host
+            if await end_game(client, message):  # End the current game
+                await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ ʙʏ ᴛʜᴇ ʜᴏꜱᴛ.")
+            else:
+                await message.reply_text("An error occurred while trying to end the game. Please try again.")
+        else:
+            await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
     else:
-        await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
+        await message.reply_text("ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴏɴɢᴏɪɴɢ ᴛᴏ ᴇɴᴅ.")
