@@ -12,26 +12,33 @@ CMD = ["/", "."]
 # Inline keyboard for the game
 inline_keyboard_markup = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton("See word 👀", callback_data="view"),
-         InlineKeyboardButton("Next word 🔄", callback_data="next")],
-        [InlineKeyboardButton("I don't want to be a leader🙅‍♂", callback_data="end_game")]
+        [InlineKeyboardButton("ꜱᴇᴇ ᴡᴏʀᴅ 👀", callback_data="view"),
+         InlineKeyboardButton("ɴᴇxᴛ ᴡᴏʀᴅ 🔄", callback_data="next")],
+        [InlineKeyboardButton("ɪ ᴅᴏɴ'ᴛ ᴡᴀɴᴛ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙅‍♂", callback_data="end_game_now")]
     ]
 )
 
 # Inline keyboard for when the user opts out of being a leader
 want_to_be_leader_keyboard = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton("I want to be a leader🙋‍♂", callback_data="start_new_game")]
+        [InlineKeyboardButton("ɪ ᴡᴀɴᴛ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙋‍♂", callback_data="start_new_game")]
     ]
 )
 
 #time out close 
 close_to_be_leader_keyboard = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton("I want to be a leader🙋‍♂", callback_data="start_new_game")]
+        [InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 👥", url="https://t.me/Crocodile_game_enBot?startgroup=invite")]
     ]
 )
 
+# Define the inline keyboard for private messages
+inline_keyboard_markup_pm = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 👥", url="https://t.me/Crocodile_game_enBot?startgroup=invite")],
+        [InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ ᴏᴜʀ ɢʀᴏᴜᴘ 💖", url="https://t.me/Xtamilchat")]
+    ]
+)
 
 async def make_sure_in_game(client: Client, message: Message) -> bool:
     game = await db.get_game(message.chat.id)  # Await the database call
@@ -45,7 +52,7 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
 async def make_sure_not_in_game(client, message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        raise Exception("The game has already started! Do not blabber. 🤯")  # Simplified message
+        raise Exception("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ᴀʟʀᴇᴀᴅʏ ꜱᴛᴀʀᴛᴇᴅ! ᴅᴏ ɴᴏᴛ ʙʟᴀʙʙᴇʀ. 🤯")  # Simplified message
 
 def requires_game_running(func):
     async def wrapper(client: Client, message: Message, *args, **kwargs):
@@ -96,7 +103,7 @@ async def end_game(client: Client, message: Message) -> bool:
         try:
             await db.delete_game(message.chat.id)  # Await the database call
             logging.info(f"Game ended for chat {message.chat.id}.")
-            await message.reply_text("The game has ended.")  # Notify users that the game has ended
+            await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ᴇɴᴅᴇᴅ ᴅᴜᴇ ᴛᴏ ᴛɪᴍᴇᴏᴜᴛ. ꜱᴛᴀʀᴛ ᴛʜᴇ ɴᴇᴡ ɢᴀᴍᴇ.")  # Notify users that the game has ended
             return True
         except Exception as e:
             logging.error(f"Error ending the game: {e}")
@@ -108,7 +115,8 @@ async def scores_callback(client: Client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
 
-    # Check if the user is an admin or the owner chat_member = await client.get_chat_member(chat_id, user_id)
+    # Retrieve chat member information
+    chat_member = await client.get_chat_member(chat_id, user_id)
 
     if chat_member.status in ["administrator", "creator"]:
         total_user_scores = await db.total_scores(user_id)  # Use the database instance
@@ -121,20 +129,20 @@ async def scores_callback(client: Client, message: Message):
             f"Your total scores: {total_user_scores}\nScores in this chat: {scores_in_current_chat}"
         )
     else:
-        await message.reply_text("You don't have permission to do this.")
+        await message.reply_text("​🇾​​🇴​​🇺​ ​🇩​​🇴​​🇳​❜​🇹​ ​🇭​​🇦​​🇻​​🇪​ ​🇵​​🇪​​🇷​​🇲​​🇮​​🇸​​🇸​​🇮​​🇴​​🇳​ ​🇹​​🇴​ ​🇩​​🇴​ ​🇹​​🇭​​🇮​​🇸​.")
 
-@Client.on_callback_query(filters.regex("end_game"))
+@Client.on_callback_query(filters.regex("end_game_now"))
 async def end_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
     if game:
         if callback_query.from_user.id == game['host']['id']:  # Check if the user is the host
             await end_game(client, callback_query.message)  # End the current game
             await callback_query.message.edit_reply_markup(want_to_be_leader_keyboard)  # Show the new button
-            await callback_query.answer("The game has been ended. You can now choose to be a leader.", show_alert=True)
+            await callback_query.answer("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ. ʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴄʜᴏᴏꜱᴇ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ.", show_alert=True)
         else:
-            await callback_query.answer("You are not the leader. You cannot end the game.", show_alert=True)
+            await callback_query.answer("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ. ʏᴏᴜ ᴄᴀɴɴᴏᴛ ᴇɴᴅ ᴛʜᴇ ɢᴀᴍᴇ.", show_alert=True)
     else:
-        await callback_query.answer("There is no game to end.", show_alert=True)
+        await callback_query.answer("​🇹​​🇭​​🇪​​🇷​​🇪​ ​🇮​​🇸​ ​🇳​​🇴​ ​🇬​​🇦​​🇲​​🇪​ ​🇹​​🇴​ ​🇪​​🇳​​🇩​.", show_alert=True)
         
 @Client.on_callback_query(filters.regex("start_new_game"))
 async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
@@ -143,20 +151,26 @@ async def start_new_game_callback(client: Client, callback_query: CallbackQuery)
         await end_game(client, callback_query.message)  # End the current game
     # Start a new game with the user who clicked the button as the host
     await new_game(client, callback_query.message)  # Start a new game
-    await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
+    await callback_query.answer("ᴀ ɴᴇᴡ ɢᴀᴍᴇ ʜᴀꜱ ꜱᴛᴀʀᴛᴇᴅ! ʏᴏᴜ ᴀʀᴇ ᴛʜᴇ ʟᴇᴀᴅᴇʀ ɴᴏᴡ.", show_alert=True)
     await callback_query.message.reply_text(
-        "Game started! {message.from_user.mention}  🥳 Use the buttons below to view the word or skip to the next one.",
+        "ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
         reply_markup=inline_keyboard_markup
     )
 
 @Client.on_callback_query(filters.regex("view"))
 async def view_word_callback(client: Client, callback_query: CallbackQuery):
-    game = await get_game(client, callback_query.message)  # Await the function call
-    if game:
-        if callback_query.from_user.id == game['host']['id']:
-            await callback_query.answer(f"The word is: {game['word']}", show_alert=True)
+    try:
+        game = await get_game(client, callback_query.message)  # Await the function call
+        if game:
+            if callback_query.from_user.id == game['host']['id']:
+                await callback_query.answer(f"The word is: {game['word']}", show_alert=True)
+            else:
+                await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
+    except Exception as e:
+        if str(e) == 'The game has ended due to timeout.':
+            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​🇴​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪​.", show_alert=True)
         else:
-            await callback_query.answer("This is not for you. You are not the leader.", show_alert=True)
+            await callback_query.answer("An unexpected error occurred.", show_alert=True)
 
 @Client.on_callback_query(filters.regex("next"))
 async def next_word_callback(client: Client, callback_query: CallbackQuery):
@@ -166,7 +180,12 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
             new_word = await next_word(client, callback_query.message)  # Await the function call
             await callback_query.answer(f"The new word is: {new_word}", show_alert=True)
         else:
-            await callback_query.answer("This is not for you. You are not the leader.", show_alert=True)
+            await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
+    except Exception as e:
+        if str(e) == 'The game has ended due to timeout.':
+            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​🇴​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪.", show_alert=True)
+        else:
+            await callback_query.answer("An unexpected error occurred.", show_alert=True)
 
 @Client.on_message(filters.group & filters.command("start", CMD))
 async def start_game(client: Client, message: Message):
@@ -176,7 +195,7 @@ async def start_game(client: Client, message: Message):
         if (time() - game['start']) >= 300:
             await end_game(client, message)  # End the current game due to inactivity
             await message.reply_text(
-                f"Game has ended due to inactivity. {message.from_user.first_name} 🥳, please start a new game with /start.",
+                f"ɢᴀᴍᴇ ʜᴀꜱ ᴇɴᴅᴇᴅ ᴅᴜᴇ ᴛᴏ ɪɴᴀᴄᴛɪᴠɪᴛʏ. [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳, ᴘʟᴇᴀꜱᴇ ꜱᴛᴀʀᴛ ᴀ ɴᴇᴡ ɢᴀᴍᴇ ᴡɪᴛʜ.",
                 reply_markup=close_to_be_leader_keyboard
             )
         else:
@@ -185,9 +204,19 @@ async def start_game(client: Client, message: Message):
     else:
         await new_game(client, message)  # Start a new game
         await message.reply_text(
-            f"Game started! {message.from_user.first_name} 🥳 is explain the word.",
+            f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
             reply_markup=inline_keyboard_markup
         )
+        
+@Client.on_message(filters.private & filters.command("start", CMD))
+async def start_private(client: Client, message: Message):
+    welcome_message = "Welcome to our advanced Crocodile Game Bot! 🐊\n\n" \
+                      "Get ready to have fun and challenge your friends!"
+    
+    await message.reply_text(
+        welcome_message,
+        reply_markup=inline_keyboard_markup_pm
+    )
 
 @Client.on_message(filters.group)
 async def check_for_correct_word(client: Client, message: Message):
@@ -196,13 +225,13 @@ async def check_for_correct_word(client: Client, message: Message):
         if message.text.lower() == game['word'].lower():  # Check if the message matches the word
             if message.from_user.id == game['host']['id']:  # Check if the host provided the answer
                 await message.reply_sticker("CAACAgUAAyEFAASMPZdPAAEBWjVnnj1fEKVElmmYXzBc828kgDZTQQACNBQAAu9OkFSKgGFg2iVa2R4E")
-                await message.reply_text("Correct! But the game continues...")
+                await message.reply_text("ᴄᴏʀʀᴇᴄᴛ! ʙᴜᴛ ᴛʜᴇ ɢᴀᴍᴇ ᴄᴏɴᴛɪɴᴜᴇꜱ...")
             else:
                 await end_game(client, message)  # End the current game for non-host
-                await message.reply_text(f"Congratulations {message.from_user.mention}, you found the word! Starting a new game...")
+                await message.reply_text(f"ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴꜱ {message.from_user.mention}, ʏᴏᴜ ꜰᴏᴜɴᴅ ᴛʜᴇ ᴡᴏʀᴅ! ꜱᴛᴀʀᴛɪɴɢ ᴀ ɴᴇᴡ ɢᴀᴍᴇ...")
                 await new_game(client, message)  # Start a new game with the current user as the host
                 await message.reply_text(
-                    "Game started!  {message.from_user.mention} 🥳 Use the buttons below to view the word or skip to the next one.",
+                    "ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ!  [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
                     reply_markup=inline_keyboard_markup
                 )
 
@@ -215,6 +244,6 @@ async def end_game_callback(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game and game['host']['id'] == message.from_user.id:
         await end_game(client, message)  # End the current game
-        await message.reply_text("The game has been ended by the host.")
+        await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ ʙʏ ᴛʜᴇ ʜᴏꜱᴛ.")
     else:
-        await message.reply_text("You are not the host or there is no game to end.")
+        await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
