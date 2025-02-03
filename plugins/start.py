@@ -25,6 +25,14 @@ want_to_be_leader_keyboard = InlineKeyboardMarkup(
     ]
 )
 
+#time out close 
+close_to_be_leader_keyboard = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton("I want to be a leader🙋‍♂", callback_data="start_new_game")]
+    ]
+)
+
+
 async def make_sure_in_game(client: Client, message: Message) -> bool:
     game = await db.get_game(message.chat.id)  # Await the database call
     if game:
@@ -119,12 +127,15 @@ async def scores_callback(client: Client, message: Message):
 async def end_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
     if game:
-        await end_game(client, callback_query.message)  # End the current game
-        await callback_query.message.edit_reply_markup(want_to_be_leader_keyboard)  # Show the new button
-        await callback_query.answer("The game has been ended. You can now choose to be a leader.", show_alert=True)
+        if callback_query.from_user.id == game['host']['id']:  # Check if the user is the host
+            await end_game(client, callback_query.message)  # End the current game
+            await callback_query.message.edit_reply_markup(want_to_be_leader_keyboard)  # Show the new button
+            await callback_query.answer("The game has been ended. You can now choose to be a leader.", show_alert=True)
+        else:
+            await callback_query.answer("You are not the leader. You cannot end the game.", show_alert=True)
     else:
         await callback_query.answer("There is no game to end.", show_alert=True)
-
+        
 @Client.on_callback_query(filters.regex("start_new_game"))
 async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
@@ -166,7 +177,7 @@ async def start_game(client: Client, message: Message):
             await end_game(client, message)  # End the current game due to inactivity
             await message.reply_text(
                 f"Game has ended due to inactivity. {message.from_user.first_name} 🥳, please start a new game with /start.",
-                reply_markup=inline_keyboard_markup
+                reply_markup=close_to_be_leader_keyboard
             )
         else:
             host_name = game["host"]["first_name"]  # Get the host's first name
@@ -174,7 +185,7 @@ async def start_game(client: Client, message: Message):
     else:
         await new_game(client, message)  # Start a new game
         await message.reply_text(
-            f"Game started! {message.from_user.first_name} 🥳 is explained.",
+            f"Game started! {message.from_user.first_name} 🥳 is explain the word.",
             reply_markup=inline_keyboard_markup
         )
 
