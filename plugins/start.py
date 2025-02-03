@@ -158,7 +158,6 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
             await callback_query.answer("This is not for you. You are not the leader.", show_alert=True)
 
 @Client.on_message(filters.group & filters.command("start", CMD))
-@requires_game_not_running
 async def start_game(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
