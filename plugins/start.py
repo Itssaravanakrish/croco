@@ -176,9 +176,10 @@ async def start_game(client: Client, message: Message):
     else:
         await new_game(client, message)  # Start a new game
         await message.reply_text(
-            f"Game started! {message.from_user.first_name} 🥳 is explain the word.",
+            f"Game started! {message.from_user.first_name} 🥳 is explained.",
             reply_markup=inline_keyboard_markup
         )
+
 @Client.on_message(filters.group)
 async def check_for_correct_word(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
