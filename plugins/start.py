@@ -146,7 +146,7 @@ async def end_game_callback(client: Client, callback_query: CallbackQuery):
         await callback_query.answer("​🇹​​🇭​​🇪​​🇷​​🇪​ ​🇮​​🇸​ ​🇳​​🇴​ ​🇬​​🇦​​🇲​​🇪​ ​🇹​​о​ ​🇪​​🇳​​🇩​.", show_alert=True)
 
 @Client.on_callback_query(filters.regex("start_new_game"))
-async def start _new_game_callback(client: Client, callback_query: CallbackQuery):
+async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
     if game:
         # Attempt to end the current game
