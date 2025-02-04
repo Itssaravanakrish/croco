@@ -246,8 +246,7 @@ async def alive_callback(_, message: Message):
     await message.reply_text("I am alive and running! 💪")
 
 @Client.on_message(filters.group & filters.command("end", CMD))
-async ```python
-def end_game_callback(client: Client, message: Message):
+async def end_game_callback(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
         if game['host']['id'] == message.from_user.id:  # Check if the user is the host
