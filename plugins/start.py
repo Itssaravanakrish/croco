@@ -20,7 +20,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton("ꜱᴇᴇ ᴡᴏʀᴅ 👀", callback_data="view"),
          InlineKeyboardButton("ɴᴇxᴛ ᴡᴏʀᴅ 🔄", callback_data="next")],
-        [InlineKeyboardButton("ɪ ᴅᴏɴ'ᴛ ᴡᴀɴᴛ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙅‍♂", callback_data="end_game_now")]
+        [InlineKeyboardButton("ɪ ᴅᴏɴ'ᴛ ᴡᴀɴᴛ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙅‍♂", callback_data="end_game")]
     ]
 )
 
@@ -132,7 +132,7 @@ async def scores_callback(client: Client, message: Message):
     else:
         await message.reply_text("​🇾​​🇴​​🇺​ ​🇩​​🇴​​🇳​❜​🇹​ ​🇭​​🇦​​🇻​​🇪​ ​🇵​​🇪​​🇷​​🇲​​🇮​​🇸​​🇸​​🇮​​🇴​​🇳​ ​🇹​​о​ ​🇩​​о​ ​🇹​​н​​🇮​​🇸​.")
 
-@Client.on_callback_query(filters.regex("end_game_now"))
+@Client.on_callback_query(filters.regex("end_game"))
 async def end_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
     if game:
@@ -228,19 +228,24 @@ async def start_private(client: Client, message: Message):
 async def check_for_correct_word(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        if message.text.lower() == game['word'].lower():  # Check if the message matches the word
-            if message.from_user.id == game['host']['id']:  # Check if the host provided the answer
-                await message.reply_sticker("CAACAgUAAyEFAASMPZdPAAEBWjVnnj1fEKVElmmYXzBc828kgDZTQQACNBQAAu9OkFSKgGFg2iVa2R4E")
-                await message.reply_text("ᴄᴏʀʀᴇᴄᴛ! ʙᴜᴛ ᴛʜᴇ ɢᴀᴍᴇ ᴄᴏɴᴛɪɴᴜᴇꜱ...")
-            else:
-                await end_game(client, message)  # End the current game for non-host
-                await message.reply_text(f"ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴꜱ {message.from_user.mention}, ʏᴏᴜ ꜰᴏᴜɴᴅ ᴛʜᴇ ᴡᴏʀᴅ! ꜱᴛᴀʀᴛɪɴɢ ᴀ ɴᴇᴡ ɢᴀᴍᴇ...")
-                await new_game(client, message)  # Start a new game with the current user as the host
-                await message.reply_text(
-                    f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ!  [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
-                    reply_markup=inline_keyboard_markup
-                )
-
+        # Check if the message is a text message
+        if message.text:
+            if message.text.lower() == game['word'].lower():  # Check if the message matches the word
+                if message.from_user.id == game['host']['id']:  # Check if the host provided the answer
+                    await message.reply_sticker("CAACAgUAAyEFAASMPZdPAAEBWjVnnj1fEKVElmmYXzBc828kgDZTQQACNBQAAu9OkFSKgGFg2iVa2R4E")
+                    await message.reply_text("Correct! But the game continues...")
+                else:
+                    # End the game for non-host and notify
+                    await end_game(client, message)  # End the current game for non-host
+                    await message.reply_text(
+                        f"Congratulations {message.from_user.first_name}, you found the word! The game has ended due to inactivity. Starting a new game...",
+                    )
+                    await new_game(client, message)  # Start a new game with the current user as the host
+                    await message.reply_text(
+                        f"Game started! {message.from_user.first_name} 🥳 is explaining the word now.",
+                        reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
+                    )
+        
 @Client.on_message(filters.group & filters.command("alive", CMD))
 async def alive_callback(_, message: Message):
     await message.reply_text("I am alive and running! 💪")
