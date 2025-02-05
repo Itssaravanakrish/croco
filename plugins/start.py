@@ -5,7 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ChatType
 from words import choice
-from mongo.users_and_chats import db, ChatNotFoundError
+from mongo.users_and_chats import db, ChatNotFoundError, UserNotFoundError
 from config import SUDO_USERS
 
 # Configure logging
@@ -44,7 +44,7 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
     game = await db.get_game(message.chat.id)  # Await the database call
     if game:
         if (time() - game['start']) >= 300:
-            await end_game(client, message)  # End the game due to timeout
+            await handle_end_game(client, message)  # End the game due to timeout
             return False  # Indicate that the game has ended
         return True
     return False  # No game is ongoing
@@ -96,11 +96,11 @@ async def next_word(client: Client, message: Message) -> str:
 async def is_true(client: Client, message: Message, word: str) -> bool:
     game = await get_game(client, message)  # Await the function call
     if game['word'] == word.lower():
-        await end_game(client, message)  # Await the end_game function
+        await handle_end_game(client, message)  # Await the end_game function
         return True
     return False
 
-async def end_game(client: Client, message: Message) -> bool:
+async def handle_end_game(client: Client, message: Message) -> bool:
     if await db.get_game(message.chat.id):  # Await the database call
         try:
             await db.delete_game(message.chat.id)  # Await the database call
@@ -124,7 +124,7 @@ async def check_game_status(client: Client, message: Message):
     game = await db.get_game(message.chat.id)
     if game:
         if (time() - game['start']) >= 300:
-            await end_game(client, message)  # End the current game due to inactivity
+            await handle_end_game(client, message)  # End the current game due to inactivity
             return None  # Indicate that the game has ended
         return game  # Return the ongoing game
     return None  # No game is ongoing
