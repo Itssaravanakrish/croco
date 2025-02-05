@@ -7,6 +7,7 @@ from pyrogram.enums import ChatType
 from words import choice
 from mongo.users_and_chats import db, ChatNotFoundError
 from config import SUDO_USERS
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -27,7 +28,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 # Inline keyboard for when the user opts out of being a leader
 want_to_be_leader_keyboard = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton("ɪ ᴡᴀɴᴛ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙋‍♂", callback_data="start_new_game")]
+        [InlineKeyboardButton("ɪ ᴡᴀɴᴛ ᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙋‍♂", callback_data="start_new_game")]
     ]
 )
 
@@ -81,7 +82,7 @@ async def new_game(client: Client, message: Message) -> bool:
 
 @requires_game_running
 async def get_game(client: Client, message: Message) -> dict:
- return await db.get_game(message.chat.id)  # Await the database call
+    return await db.get_game(message.chat.id)  # Await the database call
 
 @requires_game_running
 async def next_word(client: Client, message: Message) -> str:
@@ -127,7 +128,7 @@ async def check_game_status(client: Client, message: Message):
             return None  # Indicate that the game has ended
         return game  # Return the ongoing game
     return None  # No game is ongoing
-    
+
 @Client.on_message(filters.group & filters.command("score", CMD))
 async def scores_callback(client: Client, message: Message):
     user_id = message.from_user.id
@@ -148,7 +149,7 @@ async def scores_callback(client: Client, message: Message):
         await message.reply_text("​🇾​​🇴​​🇺​ ​🇩​​🇴​​🇳​❜​🇹​ ​🇭​​🇦​​🇻​​🇪​ ​🇵​​🇪​​🇷​​🇲​​🇮​​🇸​​🇸​​🇮​​🇴​​🇳​ ​🇹​​о​ ​🇩​​о​ ​🇹​​н​​🇮​​🇸​.")
 
 @Client.on_callback_query(filters.regex("end_game"))
-async def end_game_callback(client: Client, callback_query: CallbackQuery):
+async def end_now_callback(client: Client, callback_query: CallbackQuery):
     logging.info("End game button clicked.")
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
 
@@ -175,7 +176,7 @@ async def start_new_game_callback(client: Client, callback_query: CallbackQuery)
         f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
         reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
     )
-    
+
 @Client.on_callback_query(filters.regex("view"))
 async def view_word_callback(client: Client, callback_query: CallbackQuery):
     try:
@@ -187,7 +188,7 @@ async def view_word_callback(client: Client, callback_query: CallbackQuery):
                 await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
     except Exception as e:
         if str(e) == 'The game has ended due to timeout.':
-            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪​.", show_alert=True)
+            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​ 🇼​🇪​ ​🇹​​🇦​​🇭​ ​🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪​.", show_alert=True)
         else:
             await callback_query.answer("An unexpected error occurred.", show_alert=True)
 
@@ -203,7 +204,7 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
                 await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
     except Exception as e:
         if str(e) == 'The game has ended due to timeout.':
-            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​ 🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪.", show_alert=True)
+            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪.", show_alert=True)
         else:
             await callback_query.answer("An unexpected error occurred.", show_alert=True)
 
@@ -240,7 +241,7 @@ async def start_game(client: Client, message: Message):
     await new_game(client, message)  # Start a new game
     await message.reply_text(
         f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
-        reply_markup=inline_keyboard_markup
+        reply_markup =inline_keyboard_markup
     )
 
 @Client.on_message(filters.private & filters.command("start", CMD))
@@ -288,7 +289,7 @@ async def check_for_correct_word(client: Client, message: Message):
                     await message.reply_text("Correct! But the game continues...")
                 else:
                     # End the game for non-host and notify
-                    await end_game(client, message)  # End the current game for non-host
+                    await handle_end_game(client, message)  # End the current game for non-host
                     await message.reply_text(
                         f"Congratulations {message.from_user.first_name}, you found the word! The game has ended due to inactivity. Starting a new game...",
                     )
@@ -303,7 +304,7 @@ async def end_game_callback(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
         if game['host']['id'] == message.from_user.id:  # Check if the user is the host
-            if await end_game(client, message):  # End the current game
+            if await handle_end_game(client, message):  # End the current game
                 await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ ʙʏ ᴛʜᴇ ʜᴏꜱᴛ.")
             else:
                 await message.reply_text("An error occurred while trying to end the game. Please try again.")
@@ -311,3 +312,4 @@ async def end_game_callback(client: Client, message: Message):
             await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
     else:
         await message.reply_text("ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴏɴɢᴏɪɴɢ ᴛᴏ ᴇɴᴅ.")
+``` ### Suggested Improvements and Corrections
