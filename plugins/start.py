@@ -155,8 +155,13 @@ async def end_now_callback(client: Client, callback_query: CallbackQuery):
 
     if game:
         if callback_query.from_user.id == game['host']['id']:  # Check if the user is the host
-            await end_game(client, callback_query.message)  # End the current game
-            await callback_query.message.reply_text("The game has been ended. You can now choose to start a new game.", reply_markup=want_to_be_leader_keyboard)
+            await handle_end_game(client, callback_query.message)  # End the current game
+            await callback_query.message.delete()  # Delete the old message
+            await client.send_message(
+                callback_query.message.chat.id,
+                "The game has been ended. You can now choose to start a new game.",
+                reply_markup=want_to_be_leader_keyboard
+            )
             await callback_query.answer("The game has been ended.", show_alert=True)
         else:
             await callback_query.answer("You are not the leader. You cannot end the game.", show_alert=True)
@@ -172,10 +177,18 @@ async def start_new_game_callback(client: Client, callback_query: CallbackQuery)
 
     # Start a new game with the user who clicked the button as the host
     await new_game(client, callback_query.message)  # Start a new game
-    await callback_query.message.reply_text(
+
+    # Optionally, delete the old message if it contains the previous game state
+    await callback_query.message.delete()  # Delete the old message
+
+    # Send a new message indicating the game has started
+    await client.send_message(
+        callback_query.message.chat.id,
         f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
         reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
     )
+
+    logging.info(f"New game started by {callback_query.from_user.first_name} in chat {callback_query.message.chat.id}.")
 
 @Client.on_callback_query(filters.regex("view"))
 async def view_word_callback(client: Client, callback_query: CallbackQuery):
