@@ -54,9 +54,16 @@ class Database:
         
     # User management methods
     async def add_user(self, user_id: str, user_data: Dict[str, Any]) -> None:
+        """Add a user to the database if they do not already exist."""
+        existing_user = await self.users_collection.find_one({"user_id": user_id})
+        if existing_user:
+            logging.info(f"User  {user_id} already exists in the database. Skipping addition.")
+            return  # User already exists, do not add again
+        
         user = {"user_id": user_id, **user_data}
         try:
             await self.users_collection.insert_one(user)
+            logging.info(f"User  {user_id} added to the database.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add user", user_id, e)
 
@@ -78,9 +85,16 @@ class Database:
 
     # Chat management methods
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
+        """Add a chat to the database if it does not already exist."""
+        existing_chat = await self.chats_collection.find_one({"chat_id": chat_id})
+        if existing_chat:
+            logging.info(f"Chat {chat_id} already exists in the database. Skipping addition.")
+            return  # Chat already exists, do not add again
+        
         chat = {"chat_id": chat_id, **chat_data}
         try:
             await self.chats_collection.insert_one(chat)
+            logging.info(f"Chat {chat_id} added to the database.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add chat", chat_id, e)
 
@@ -94,7 +108,7 @@ class Database:
         """Update chat information."""
         await self.chats_collection.update_one(
             {"chat_id": chat_id},
- {"$set": {"title": chat_title}},
+            {"$set": {"title": chat_title}},
             upsert=True
         )
 
