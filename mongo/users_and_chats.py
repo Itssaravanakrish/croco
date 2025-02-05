@@ -39,6 +39,17 @@ class Database:
         self.client.close()
         logging.info("Database connection closed.")
 
+# For broadcast collection
+    async def get_all_user_ids(self) -> list:
+        """Fetch all user IDs from the users collection."""
+        users = await self.users_collection.find({}, {'user_id': 1}).to_list(length=None)
+        return [user['user_id'] for user in users]
+
+    async def get_all_group_ids(self) -> list:
+        """Fetch all group IDs from the chats collection."""
+        groups = await self.chats_collection.find({}, {'chat_id': 1}).to_list(length=None)
+        return [group['chat_id'] for group in groups]
+        
     # User management methods
     async def add_user(self, user_id: str, user_data: Dict[str, Any]) -> None:
         user = {"user_id": user_id, **user_data}
