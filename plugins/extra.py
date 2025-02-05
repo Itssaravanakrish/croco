@@ -86,3 +86,18 @@ async def broadcast_group_callback(client: Client, message: Message):
         f"Failed: {fail_count}\n"
         f"Pending: {pending_count}"
     )
+
+@Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
+async def stats_callback(client: Client, message: Message):
+    user_count = await db.get_user_count()  # Get total user count
+    chat_count = await db.get_chat_count()  # Get total chat count
+    game_count = await db.get_game_count()  # Get total game count
+
+    stats_message = (
+        f"📊 **Bot Statistics**:\n"
+        f"👥 Total Users: {user_count}\n"
+        f"💬 Total Chats: {chat_count}\n"
+        f"🎮 Total Games Played: {game_count}\n"
+    )
+
+    await message.reply_text(stats_message)
