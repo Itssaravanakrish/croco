@@ -1,12 +1,9 @@
-# mongo/users_and_chats.py
-
 import logging
 from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
 import pyrogram
-import asyncio
 
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
@@ -39,7 +36,12 @@ class Database:
         self.client.close()
         logging.info("Database connection closed.")
 
-# For broadcast collection
+    async def handle_db_error(self, action: str, identifier: str, e: Exception):
+        """Handle database errors by logging and raising exceptions."""
+        logging.error(f"Failed to {action} for {identifier}: {e}")
+        raise
+
+    # For broadcast collection
     async def get_all_user_ids(self) -> list:
         """Fetch all user IDs from the users collection."""
         users = await self.users_collection.find({}, {'user_id': 1}).to_list(length=None)
@@ -56,8 +58,7 @@ class Database:
         try:
             await self.users_collection.insert_one(user)
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            logging.error(f"Failed to add user {user_id}: {e}")
-            raise
+            await self.handle_db_error("add user", user_id, e)
 
     async def get_user(self, user_id: str) -> Dict[str, Any]:
         user = await self.users_collection.find_one({"user_id": user_id})
@@ -79,8 +80,7 @@ class Database:
         try:
             await self.chats_collection.insert_one(chat)
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            logging.error(f"Failed to add chat {chat_id}: {e}")
-            raise
+            await self.handle_db_error("add chat", chat_id, e)
 
     async def get_chat(self, chat_id: str) -> Optional[Dict[str, Any]]:
         chat = await self.chats_collection.find_one({"chat_id": chat_id})
@@ -102,7 +102,7 @@ class Database:
         # Convert the host User object to a dictionary
         if 'host' in game_data and isinstance(game_data['host'], pyrogram.types.User):
             game_data['host'] = {
-                'id': game_data['host'].id,
+                'id': game_data['host']. id,
                 'first_name': game_data['host'].first_name,
                 'username': game_data['host'].username,
                 # Add any other fields you want to store
