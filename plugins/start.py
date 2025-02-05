@@ -66,8 +66,9 @@ def requires_game_not_running(func):
         return await func(client, message, *args, **kwargs)  # Await the wrapped function
     return wrapper
 
-@requires_game_not_running
+@requires_game_running
 async def new_game(client: Client, message: Message) -> bool:
+    word = choice()  # Get a new word for the game
     await db.set_game(message.chat.id, {  # Await the database call
         'start': time(),
         'host': {
@@ -75,9 +76,8 @@ async def new_game(client: Client, message: Message) -> bool:
             'first_name': message.from_user.first_name,
             'username': message.from_user.username,
         },
-        'word': choice(),
+        'word': word,
     })
-    logging.info(f"New game started by {message.from_user.first_name} in chat {message.chat.id}.")
     return True
 
 @requires_game_running
@@ -172,24 +172,28 @@ async def end_now_callback(client: Client, callback_query: CallbackQuery):
 async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
     if game:
-        await callback_query.answer("A game is already ongoing. Please end the current game before starting a new one.", show_alert=True)
-        return  # Exit if there is an ongoing game
+        # Attempt to end the current game
+        if await handle_end_game(client, callback_query.message):  # End the current game if it exists
+            await callback_query.answer("The previous game has been ended.", show_alert=True)
+        else:
+            await callback_query.answer("An error occurred while ending the previous game.", show_alert=True)
+            return  # Exit if there was an error
 
     # Start a new game with the user who clicked the button as the host
     await new_game(client, callback_query.message)  # Start a new game
 
-    # Optionally, delete the old message if it contains the previous game state
-    await callback_query.message.delete()  # Delete the old message
+    # Retrieve the new game state to ensure it's set up correctly
+    new_game_state = await db.get_game(callback_query.message.chat.id)
 
-    # Send a new message indicating the game has started
-    await client.send_message(
-        callback_query.message.chat.id,
-        f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
-        reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
-    )
-
-    logging.info(f"New game started by {callback_query.from_user.first_name} in chat {callback_query.message.chat.id}.")
-
+    if new_game_state:
+        await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
+        await callback_query.message.reply_text(
+            f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
+            reply_markup=inline_keyboard_markup
+        )
+    else:
+        await callback_query.answer("Failed to start a new game. Please try again.", show_alert=True)
+        
 @Client.on_callback_query(filters.regex("view"))
 async def view_word_callback(client: Client, callback_query: CallbackQuery):
     try:
