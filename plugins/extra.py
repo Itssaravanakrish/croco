@@ -40,7 +40,8 @@ async def broadcast_pm_callback(client: Client, message: Message):
         try:
             await client.send_message(user_id, broadcast_message)
             success_count += 1
-            await asyncio.sleep(0.1) except Exception as e:
+            await asyncio.sleep(0.1)  # Adding delay to prevent hitting rate limits
+        except Exception as e:
             logging.error(f"Failed to send message to user {user_id}: {e}")
             fail_count += 1
 
