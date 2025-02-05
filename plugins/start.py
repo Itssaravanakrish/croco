@@ -223,6 +223,27 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
 
 @Client.on_message(filters.group & filters.command("start", CMD))
 async def start_game(client: Client, message: Message):
+    user_id = str(message.from_user.id)
+    user_data = {
+        "first_name": message.from_user.first_name,
+        "username": message.from_user.username,
+        # Add any other user data you want to store
+    }
+
+    # Check if the user already exists
+    try:
+        await db.get_user(user_id)  # Attempt to retrieve the user
+        logging.info(f"User  {user_id} already exists in the database.")
+    except UserNotFoundError:
+        # Add the user to the database if they are not already present
+        try:
+            await db.add_user(user_id, user_data)  # Add user to the database
+            logging.info(f"User  {user_id} added to the database.")
+        except Exception as e:
+            logging.error(f"Failed to add user {user_id}: {e}")
+            await message.reply_text("An error occurred while adding you to the database. Please try again later.")
+            return  # Exit if there was an error
+
     # Add the chat to the database
     chat_id = str(message.chat.id)
     chat_data = {
@@ -253,8 +274,8 @@ async def start_game(client: Client, message: Message):
     # Start a new game
     await new_game(client, message)  # Start a new game
     await message.reply_text(
-        f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
-        reply_markup =inline_keyboard_markup
+        f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{message.from_user.first_name}](tg://user?id={message.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɡ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
+        reply_markup=inline_keyboard_markup
     )
 
 @Client.on_message(filters.private & filters.command("start", CMD))
@@ -270,6 +291,7 @@ async def start_private(client: Client, message: Message):
     try:
         await db.get_user(user_id)  # Attempt to retrieve the user
         logging.info(f"User  {user_id} already exists in the database.")
+        # Optionally, you can send a welcome back message here
     except UserNotFoundError:
         # Add the user to the database if they are not already present
         try:
