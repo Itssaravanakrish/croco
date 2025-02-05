@@ -94,26 +94,24 @@ class Database:
         """Update chat information."""
         await self.chats_collection.update_one(
             {"chat_id": chat_id},
-            {"$set": {"title": chat_title}},
+ {"$set": {"title": chat_title}},
             upsert=True
- )
+        )
 
     # Game management methods
     async def set_game(self, chat_id: str, game_data: Dict[str, Any]) -> None:
         """Set the game state for a chat."""
-        # Convert the host User object to a dictionary
         if 'host' in game_data and isinstance(game_data['host'], pyrogram.types.User):
             game_data['host'] = {
                 'id': game_data['host'].id,
                 'first_name': game_data['host'].first_name,
                 'username': game_data['host'].username,
-                # Add any other fields you want to store
             }
         
         await self.games_collection.update_one(
             {"chat_id": chat_id},
             {"$set": game_data},
-            upsert=True  # Create a new document if it doesn't exist
+            upsert=True
         )
 
     async def get_game(self, chat_id: str) -> Optional[Dict[str, Any]]:
@@ -124,6 +122,18 @@ class Database:
     async def delete_game(self, chat_id: str) -> None:
         """Delete the game state for a chat."""
         await self.games_collection.delete_one({"chat_id": chat_id})
+
+    async def get_user_count(self) -> int:
+        """Get the total number of users."""
+        return await self.users_collection.count_documents({})
+
+    async def get_chat_count(self) -> int:
+        """Get the total number of chats."""
+        return await self.chats_collection.count_documents({})
+
+    async def get_game_count(self) -> int:
+        """Get the total number of games played (if applicable)."""
+        return await self.games_collection.count_documents({})
 
 # Create a database instance
 db = Database(MONGO_URI, MONGO_DB_NAME)
