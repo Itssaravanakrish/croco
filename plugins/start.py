@@ -6,7 +6,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from pyrogram.enums import ChatType
 from words import choice
 from mongo.users_and_chats import db  # Import the database instance
-
+from config import SUDO_USERS
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -111,15 +111,21 @@ async def end_game(client: Client, message: Message) -> bool:
             return False  # Indicate that there was an error
     return False  # No game was found to end
 
+async def is_user_admin(client: Client, chat_id: int, user_id: int) -> bool:
+    try:
+        chat_member = await client.get_chat_member(chat_id, user_id)
+        return chat_member.status in ["administrator", "creator"]
+    except Exception as e:
+        logging.error(f"Error checking admin status: {e}")
+        return False
+
 @Client.on_message(filters.group & filters.command("score", CMD))
 async def scores_callback(client: Client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
 
-    # Retrieve chat member information
-    chat_member = await client.get_chat_member(chat_id, user_id)
-
-    if chat_member.status in ["administrator", "creator"]:
+    # Check if the user is an admin or creator
+    if await is_user_admin(client, chat_id, user_id):
         total_user_scores = await db.total_scores(user_id)  # Use the database instance
         scores_in_current_chat = (
             await db.scores_in_chat(chat_id, user_id)  # Use the database instance
@@ -134,36 +140,33 @@ async def scores_callback(client: Client, message: Message):
 
 @Client.on_callback_query(filters.regex("end_game"))
 async def end_game_callback(client: Client, callback_query: CallbackQuery):
+    logging.info("End game button clicked.")
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
+
     if game:
         if callback_query.from_user.id == game['host']['id']:  # Check if the user is the host
             await end_game(client, callback_query.message)  # End the current game
-            await callback_query.message.edit_reply_markup(want_to_be_leader_keyboard)  # Show the new button
-            await callback_query.answer("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ. ʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴄʜᴏᴏꜱᴇ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ.", show_alert=True)
+            await callback_query.message.reply_text("The game has been ended. You can now choose to start a new game.", reply_markup=want_to_be_leader_keyboard)
+            await callback_query.answer("The game has been ended.", show_alert=True)
         else:
-            await callback_query.answer("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ. ʏᴏᴜ ᴄᴀɴɴᴏᴛ ᴇɴᴅ ᴛʜᴇ ɢᴀᴍᴇ.", show_alert=True)
+            await callback_query.answer("You are not the leader. You cannot end the game.", show_alert=True)
     else:
-        await callback_query.answer("​🇹​​🇭​​🇪​​🇷​​🇪​ ​🇮​​🇸​ ​🇳​​🇴​ ​🇬​​🇦​​🇲​​🇪​ ​🇹​​о​ ​🇪​​🇳​​🇩​.", show_alert=True)
+        await callback_query.answer("The game is already ended.", show_alert=True)
 
 @Client.on_callback_query(filters.regex("start_new_game"))
 async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
     game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
     if game:
-        # Attempt to end the current game
-        if await end_game(client, callback_query.message):  # End the current game if it exists
-            await callback_query.answer("The previous game has been ended.", show_alert=True)
-        else:
-            await callback_query.answer("An error occurred while ending the previous game.", show_alert=True)
-            return  # Exit if there was an error
+        await callback_query.answer("A game is already ongoing. Please end the current game before starting a new one.", show_alert=True)
+        return  # Exit if there is an ongoing game
 
     # Start a new game with the user who clicked the button as the host
     await new_game(client, callback_query.message)  # Start a new game
-    await callback_query.answer("ᴀ ɴᴇᴡ ɢᴀᴍᴇ ʜᴀꜱ ꜱᴛᴀʀᴛᴇᴅ! ʏᴏᴜ ᴀʀᴇ ᴛʜᴇ ʟᴇᴀᴅᴇʀ ɴᴏᴡ.", show_alert=True)
     await callback_query.message.reply_text(
-        f"ɢᴀᴍᴇ ꜱᴛᴀʀᴛᴇᴅ! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 ɪꜱ ᴇxᴘʟᴀɪɴɪɴɢ ᴛʜᴇ ᴡᴏʀᴅ ɴᴏᴡ.",
-        reply_markup=inline_keyboard_markup
+        f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
+        reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
     )
-
+    
 @Client.on_callback_query(filters.regex("view"))
 async def view_word_callback(client: Client, callback_query: CallbackQuery):
     try:
@@ -246,10 +249,18 @@ async def check_for_correct_word(client: Client, message: Message):
                         reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
                     )
         
-@Client.on_message(filters.group & filters.command("alive", CMD))
-async def alive_callback(_, message: Message):
+@Client.on_message(filters.command("alive", CMD))
+async def alive_callback(client: Client, message: Message):
+    # Log the command invocation
+    logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
+    
+    # Respond to the user
     await message.reply_text("I am alive and running! 💪")
 
+@Client.on_message(filters.command("ping", CMD))
+async def ping_callback(client: Client, message: Message):
+    await message.reply_text("Pong! 🏓")
+    
 @Client.on_message(filters.group & filters.command("end", CMD))
 async def end_game_callback(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
@@ -263,3 +274,67 @@ async def end_game_callback(client: Client, message: Message):
             await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
     else:
         await message.reply_text("ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴏɴɢᴏɪɴɢ ᴛᴏ ᴇɴᴅ.")
+
+from mongo.users_and_chats import db  # Import the database instance
+
+@Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))  # Replace ADMIN_USER_IDS with actual admin user IDs
+async def broadcast_pm_callback(client: Client, message: Message):
+    if len(message.command) < 2:
+        await message.reply_text("Please provide a message to broadcast.")
+        return
+
+    broadcast_message = " ".join(message.command[1:])
+    user_ids = await db.get_all_user_ids()  # Fetch user IDs from the database
+
+    total_users = len(user_ids)
+    success_count = 0
+    fail_count = 0
+
+    for user_id in user_ids:
+        try:
+            await client.send_message(user_id, broadcast_message)
+            success_count += 1
+        except Exception as e:
+            logging.error(f"Failed to send message to user {user_id}: {e}")
+            fail_count += 1
+
+    pending_count = total_users - (success_count + fail_count)
+
+    await message.reply_text(
+        f"Broadcast to PM completed!\n"
+        f"Total Users: {total_users}\n"
+        f"Success: {success_count}\n"
+        f"Failed: {fail_count}\n"
+        f"Pending: {pending_count}"
+    )
+
+@Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))  # Replace ADMIN_USER_IDS with actual admin user IDs
+async def broadcast_group_callback(client: Client, message: Message):
+    if len(message.command) < 2:
+        await message.reply_text("Please provide a message to broadcast.")
+        return
+
+    broadcast_message = " ".join(message.command[1:])
+    group_ids = await db.get_all_group_ids()  # Fetch group IDs from the database
+
+    total_groups = len(group_ids)
+    success_count = 0
+    fail_count = 0
+
+    for group_id in group_ids:
+        try:
+            await client.send_message(group_id, broadcast_message)
+            success_count += 1
+        except Exception as e:
+            logging.error(f"Failed to send message to group {group_id}: {e}")
+            fail_count += 1
+
+    pending_count = total_groups - (success_count + fail_count)
+
+    await message.reply_text(
+        f"Broadcast to groups completed!\n"
+        f"Total Groups: {total_groups}\n"
+        f"Success: {success_count}\n"
+        f"Failed: {fail_count}\n"
+        f"Pending: {pending_count}"
+    )
