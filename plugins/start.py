@@ -312,4 +312,3 @@ async def end_game_callback(client: Client, message: Message):
             await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
     else:
         await message.reply_text("ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴏɴɢᴏɪɴɢ ᴛᴏ ᴇɴᴅ.")
-``` ### Suggested Improvements and Corrections
