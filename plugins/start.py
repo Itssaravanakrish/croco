@@ -5,7 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ChatType
 from words import choice
-from mongo.users_and_chats import db  # Import the database instance
+from mongo.users_and_chats import db, ChatNotFoundError
 from config import SUDO_USERS
 # Configure logging
 logging.basicConfig(
