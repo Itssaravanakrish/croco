@@ -39,7 +39,7 @@ class Database:
     async def handle_db_error(self, action: str, identifier: str, e: Exception):
         """Handle database errors by logging and raising exceptions."""
         logging.error(f"Failed to {action} for {identifier}: {e}")
-        raise
+        raise DatabaseConnectionError(f"Failed to {action} for {identifier}: {e}")
 
     # For broadcast collection
     async def get_all_user_ids(self) -> list:
@@ -67,12 +67,14 @@ class Database:
         return user
 
     async def total_scores(self, user_id: str) -> int:
-        # Implement logic to calculate total scores for the user
-        pass
+        """Calculate total scores for the user."""
+        # Implement your logic to calculate total scores here
+        return 0  # Placeholder return value
 
     async def scores_in_chat(self, chat_id: str, user_id: str) -> int:
-        # Implement logic to calculate scores in a specific chat for the user
-        pass
+        """Calculate scores in a specific chat for the user."""
+        # Implement your logic to calculate scores in a specific chat here
+        return 0  # Placeholder return value
 
     # Chat management methods
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
@@ -94,7 +96,7 @@ class Database:
             {"chat_id": chat_id},
             {"$set": {"title": chat_title}},
             upsert=True
-        )
+ )
 
     # Game management methods
     async def set_game(self, chat_id: str, game_data: Dict[str, Any]) -> None:
@@ -102,7 +104,7 @@ class Database:
         # Convert the host User object to a dictionary
         if 'host' in game_data and isinstance(game_data['host'], pyrogram.types.User):
             game_data['host'] = {
-                'id': game_data['host']. id,
+                'id': game_data['host'].id,
                 'first_name': game_data['host'].first_name,
                 'username': game_data['host'].username,
                 # Add any other fields you want to store
