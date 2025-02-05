@@ -213,14 +213,22 @@ async def start_game(client: Client, message: Message):
     chat_id = str(message.chat.id)
     chat_data = {
         "title": message.chat.title,
-        "type": message.chat.type,
+        "type": message.chat.type.name,  # Convert ChatType to string
     }
     
+    # Check if the chat already exists
     try:
-        await db.add_chat(chat_id, chat_data)  # Add chat to the database
-        logging.info(f"Chat {chat_id} added to the database.")
-    except Exception as e:
-        logging.error(f"Failed to add chat {chat_id}: {e}")
+        await db.get_chat(chat_id)  # Attempt to retrieve the chat
+        logging.info(f"Chat {chat_id} already exists in the database.")
+    except ChatNotFoundError:
+        # Add the chat to the database if it is not already present
+        try:
+            await db.add_chat(chat_id, chat_data)  # Add chat to the database
+            logging.info(f"Chat {chat_id} added to the database.")
+        except Exception as e:
+            logging.error(f"Failed to add chat {chat_id}: {e}")
+            await message.reply_text("An error occurred while adding the chat to the database. Please try again later.")
+            return  # Exit if there was an error
 
     game = await check_game_status(client, message)  # Check if a game is ongoing
     if game:
@@ -244,12 +252,19 @@ async def start_private(client: Client, message: Message):
         # Add any other user data you want to store
     }
     
-    # Add the user to the database if they are not already present
+    # Check if the user already exists
     try:
-        await db.add_user(user_id, user_data)  # Add user to the database
-        logging.info(f"User  {user_id} added to the database.")
-    except Exception as e:
-        logging.error(f"Failed to add user {user_id}: {e}")
+        await db.get_user(user_id)  # Attempt to retrieve the user
+        logging.info(f"User  {user_id} already exists in the database.")
+    except UserNotFoundError:
+        # Add the user to the database if they are not already present
+        try:
+            await db.add_user(user_id, user_data)  # Add user to the database
+            logging.info(f"User  {user_id} added to the database.")
+        except Exception as e:
+            logging.error(f"Failed to add user {user_id}: {e}")
+            await message.reply_text("An error occurred while adding you to the database. Please try again later.")
+            return  # Exit if there was an error
 
     welcome_message = (
         "Welcome to our advanced Crocodile Game Bot! 🐊\n\n"
@@ -282,91 +297,3 @@ async def check_for_correct_word(client: Client, message: Message):
                         f"Game started! {message.from_user.first_name} 🥳 is explaining the word now.",
                         reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
                     )
-        
-@Client.on_message(filters.command("alive", CMD))
-async def alive_callback(client: Client, message: Message):
-    # Log the command invocation
-    logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
-    
-    # Respond to the user
-    await message.reply_text("I am alive and running! 💪")
-
-@Client.on_message(filters.command("ping", CMD))
-async def ping_callback(client: Client, message: Message):
-    await message.reply_text("Pong! 🏓")
-    
-@Client.on_message(filters.group & filters.command("end", CMD))
-async def end_game_callback(client: Client, message: Message):
-    game = await db.get_game(message.chat.id)  # Check if a game is ongoing
-    if game:
-        if game['host']['id'] == message.from_user.id:  # Check if the user is the host
-            if await end_game(client, message):  # End the current game
-                await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ ʙʏ ᴛʜᴇ ʜᴏꜱᴛ.")
-            else:
-                await message.reply_text("An error occurred while trying to end the game. Please try again.")
-        else:
-            await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
-    else:
-        await message.reply_text("ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴏɴɢᴏɪɴɢ ᴛᴏ ᴇɴᴅ.")
-
-@Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
-async def broadcast_pm_callback(client: Client, message: Message):
-    if len(message.command) < 2:
-        await message.reply_text("Please provide a message to broadcast.")
-        return
-
-    broadcast_message = " ".join(message.command[1:])
-    user_ids = await db.get_all_user_ids()  # Fetch user IDs from the database
-
-    total_users = len(user_ids)
-    success_count = 0
-    fail_count = 0
-
-    for user_id in user_ids:
-        try:
-            await client.send_message(user_id, broadcast_message)
-            success_count += 1
-        except Exception as e:
-            logging.error(f"Failed to send message to user {user_id}: {e}")
-            fail_count += 1
-
-    pending_count = total_users - (success_count + fail_count)
-
-    await message.reply_text(
-        f"Broadcast to PM completed!\n"
-        f"Total Users: {total_users}\n"
-        f"Success: {success_count}\n"
-        f"Failed: {fail_count}\n"
-        f"Pending: {pending_count}"
-    )
-
-@Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
-async def broadcast_group_callback(client: Client, message: Message):
-    if len(message.command) < 2:
-        await message.reply_text("Please provide a message to broadcast.")
-        return
-
-    broadcast_message = " ".join(message.command[1:])
-    group_ids = await db.get_all_group_ids()  # Fetch group IDs from the database
-
-    total_groups = len(group_ids)
-    success_count = 0
-    fail_count = 0
-
-    for group_id in group_ids:
-        try:
-            await client.send_message(group_id, broadcast_message)
-            success_count += 1
-        except Exception as e:
-            logging.error(f"Failed to send message to group {group_id}: {e}")
-            fail_count += 1
-
-    pending_count = total_groups - (success_count + fail_count)
-
-    await message.reply_text(
-        f"Broadcast to groups completed!\n"
-        f"Total Groups: {total_groups}\n"
-        f"Success: {success_count}\n"
-        f"Failed : {fail_count}\n"
-        f"Pending: {pending_count}"
-    )
