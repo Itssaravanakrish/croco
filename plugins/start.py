@@ -119,6 +119,15 @@ async def is_user_admin(client: Client, chat_id: int, user_id: int) -> bool:
         logging.error(f"Error checking admin status: {e}")
         return False
 
+async def check_game_status(client: Client, message: Message):
+    game = await db.get_game(message.chat.id)
+    if game:
+        if (time() - game['start']) >= 300:
+            await end_game(client, message)  # End the current game due to inactivity
+            return None  # Indicate that the game has ended
+        return game  # Return the ongoing game
+    return None  # No game is ongoing
+    
 @Client.on_message(filters.group & filters.command("score", CMD))
 async def scores_callback(client: Client, message: Message):
     user_id = message.from_user.id
@@ -200,15 +209,24 @@ async def next_word_callback(client: Client, callback_query: CallbackQuery):
 
 @Client.on_message(filters.group & filters.command("start", CMD))
 async def start_game(client: Client, message: Message):
-    game = await db.get_game(message.chat.id)  # Check if a game is ongoing
+    # Add the chat to the database
+    chat_id = str(message.chat.id)
+    chat_data = {
+        "title": message.chat.title,
+        "type": message.chat.type,
+    }
+    
+    try:
+        await db.add_chat(chat_id, chat_data)  # Add chat to the database
+        logging.info(f"Chat {chat_id} added to the database.")
+    except Exception as e:
+        logging.error(f"Failed to add chat {chat_id}: {e}")
+
+    game = await check_game_status(client, message)  # Check if a game is ongoing
     if game:
-        if (time() - game['start']) >= 300:
-            await end_game(client, message)  # End the current game due to inactivity
-            # No notification to the user about the game ending
-        else:
-            host_name = game["host"]["first_name"]  # Get the host's first name
-            await message.reply_text(f"The game is already started by {host_name}.")  # Notify the user
-            return  # Exit if the game is ongoing
+        host_name = game["host"]["first_name"]  # Get the host's first name
+        await message.reply_text(f"The game is already started by {host_name}.")  # Notify the user
+        return  # Exit if the game is ongoing
 
     # Start a new game
     await new_game(client, message)  # Start a new game
@@ -219,14 +237,30 @@ async def start_game(client: Client, message: Message):
 
 @Client.on_message(filters.private & filters.command("start", CMD))
 async def start_private(client: Client, message: Message):
-    welcome_message = "Welcome to our advanced Crocodile Game Bot! 🐊\n\n" \
-                      "Get ready to have fun and challenge your friends!"
+    user_id = str(message.from_user.id)
+    user_data = {
+        "first_name": message.from_user.first_name,
+        "username": message.from_user.username,
+        # Add any other user data you want to store
+    }
+    
+    # Add the user to the database if they are not already present
+    try:
+        await db.add_user(user_id, user_data)  # Add user to the database
+        logging.info(f"User  {user_id} added to the database.")
+    except Exception as e:
+        logging.error(f"Failed to add user {user_id}: {e}")
+
+    welcome_message = (
+        "Welcome to our advanced Crocodile Game Bot! 🐊\n\n"
+        "Get ready to have fun and challenge your friends!"
+    )
     
     await message.reply_text(
         welcome_message,
-        reply_markup=inline_keyboard_markup_pm
+        reply_markup=inline_keyboard_markup_pm  # Optional: You can include an inline keyboard if needed
     )
-
+    
 @Client.on_message(filters.group)
 async def check_for_correct_word(client: Client, message: Message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
@@ -275,9 +309,7 @@ async def end_game_callback(client: Client, message: Message):
     else:
         await message.reply_text("ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴏɴɢᴏɪɴɢ ᴛᴏ ᴇɴᴅ.")
 
-from mongo.users_and_chats import db  # Import the database instance
-
-@Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))  # Replace ADMIN_USER_IDS with actual admin user IDs
+@Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
 async def broadcast_pm_callback(client: Client, message: Message):
     if len(message.command) < 2:
         await message.reply_text("Please provide a message to broadcast.")
@@ -308,7 +340,7 @@ async def broadcast_pm_callback(client: Client, message: Message):
         f"Pending: {pending_count}"
     )
 
-@Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))  # Replace ADMIN_USER_IDS with actual admin user IDs
+@Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
 async def broadcast_group_callback(client: Client, message: Message):
     if len(message.command) < 2:
         await message.reply_text("Please provide a message to broadcast.")
@@ -335,6 +367,6 @@ async def broadcast_group_callback(client: Client, message: Message):
         f"Broadcast to groups completed!\n"
         f"Total Groups: {total_groups}\n"
         f"Success: {success_count}\n"
-        f"Failed: {fail_count}\n"
+        f"Failed : {fail_count}\n"
         f"Pending: {pending_count}"
     )
