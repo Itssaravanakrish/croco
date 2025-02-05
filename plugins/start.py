@@ -297,3 +297,17 @@ async def check_for_correct_word(client: Client, message: Message):
                         f"Game started! {message.from_user.first_name} 🥳 is explaining the word now.",
                         reply_markup=inline_keyboard_markup  # Show the inline keyboard for the new game
                     )
+
+@Client.on_message(filters.group & filters.command("end", CMD))
+async def end_game_callback(client: Client, message: Message):
+    game = await db.get_game(message.chat.id)  # Check if a game is ongoing
+    if game:
+        if game['host']['id'] == message.from_user.id:  # Check if the user is the host
+            if await end_game(client, message):  # End the current game
+                await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴅᴇᴅ ʙʏ ᴛʜᴇ ʜᴏꜱᴛ.")
+            else:
+                await message.reply_text("An error occurred while trying to end the game. Please try again.")
+        else:
+            await message.reply_text("ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʜᴏꜱᴛ ᴏʀ ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴛᴏ ᴇɴᴅ.")
+    else:
+        await message.reply_text("ᴛʜᴇʀᴇ ɪꜱ ɴᴏ ɢᴀᴍᴇ ᴏɴɢᴏɪɴɢ ᴛᴏ ᴇɴᴅ.")
