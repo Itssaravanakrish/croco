@@ -45,7 +45,7 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
 async def make_sure_not_in_game(client, message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀ ꜱ ᴀʟʀᴇᴀᴅʏ ꜱᴛᴀʀᴛᴇᴅ! ᴅᴏ ɴᴏᴛ ʙʟᴀʙʙᴇʀ. 🤯")  # Notify the user
+        await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ᴀʟʀᴇᴀᴅʏ ꜱᴛᴀʀᴛᴇᴅ! ᴅᴏ ɴᴏᴛ ʙʟᴀʙʙᴇʀ. 🤯")  # Notify the user
         return True  # Indicate that the game is ongoing
     return False  # No game is ongoing
 
@@ -150,7 +150,7 @@ async def scores_callback(client: Client, message: Message):
             f"Your total scores: {total_user_scores}\nScores in this chat: {scores_in_current_chat}"
         )
     else:
-        await message.reply_text("​🇾​​🇴​​🇺​ ​🇩​​🇴​​🇳​❜​🇹​ ​🇭​​🇦​​🇻​​🇪​ ​🇵​​🇪​​🇷​​🇲​​🇮​​🇸​​🇸​​🇮​​🇴​​🇳​ ​🇹​​о​ ​🇩​​о​ ​🇹​​н​​🇮​​🇸​.")
+        await message.reply_text("🇾🇴🇺 🇩🇴🇳❜🇹 🇭🇦🇻🇪 🇵🇪🇷🇲🇮🇸🇸🇮🇴🇳 🇹о 🇩о 🇹н🇮🇸.")
 
 @Client.on_callback_query(filters.regex("end_game"))
 async def end_now_callback(client: Client, callback_query: CallbackQuery):
@@ -174,14 +174,8 @@ async def end_now_callback(client: Client, callback_query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex("start_new_game"))
 async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
-    game = await db.get_game(callback_query.message.chat.id)  # Check if a game is ongoing
-    if game:
-        # Attempt to end the current game
-        if await handle_end_game(client, callback_query.message):  # End the current game if it exists
-            await callback_query.answer("The previous game has been ended.", show_alert=True)
-        else:
-            await callback_query.answer("An error occurred while ending the previous game.", show_alert=True)
-            return  # Exit if there was an error
+    # Acknowledge the callback query
+    await callback_query.answer()
 
     # Start a new game with the user who clicked the button as the host
     await new_game(client, callback_query.message)  # Start a new game
@@ -190,11 +184,16 @@ async def start_new_game_callback(client: Client, callback_query: CallbackQuery)
     new_game_state = await db.get_game(callback_query.message.chat.id)
 
     if new_game_state:
-        await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
-        await callback_query.message.reply_text(
+        # Delete the old message to clean up
+        await callback_query.message.delete()
+
+        # Notify that a new game has started
+        await client.send_message(
+            callback_query.message.chat.id,
             f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
             reply_markup=inline_keyboard_markup
         )
+        await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
     else:
         await callback_query.answer("Failed to start a new game. Please try again.", show_alert=True)
 
@@ -213,7 +212,7 @@ async def handle_view_next_callback(client: Client, callback_query: CallbackQuer
                 await callback_query.answer("ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ꜰᴏʀ ʏᴏᴜ. ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴛʜᴇ ʟᴇᴀᴅᴇʀ.", show_alert=True)
     except Exception as e:
         if str(e) == 'The game has ended due to timeout.':
-            await callback_query.answer("🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​ 🇩​ ​🇩​​🇺​​🇪​ ​🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​ ​🇼​🇪​ ​🇹​​🇦​​🇭​ ​🇹​​🇭​​🇪​ ​🇬​​🇦​​🇲​​🇪​ ​🇭​​🇦​​🇸​ ​🇪​​🇳​​🇩​​🇪​​🇩​ ​🇩​​🇺​​🇪​ ​🇹​​о​ ​🇹​​🇮​​🇲​​🇪​​🇴​​🇺​​🇹​. ​🇵​​🇱​​🇪​​🇦​​🇸​​🇪​ ​🇸​​🇹​​🇦​​🇷​​🇹​ ​🇦​ ​🇳​​🇪​​🇼​ ​🇬​​🇦​​🇲​​🇪​.", show_alert=True)
+            await callback_query.answer("🇹🇭🇪 🇬🇦🇲🇪 🇭🇦🇸 🇪🇳🇩🇪 🇩 🇩🇺🇪 🇹о 🇹🇮🇲🇪🇴🇺🇹. 🇵🇱🇪🇦🇸🇪 🇸🇹🇦🇷🇹 🇦 🇳🇪 🇼🇪 🇹🇦🇭 🇹🇭🇪 🇬🇦🇲🇪 🇭🇦🇸 🇪🇳🇩🇪🇩 🇩🇺🇪 🇹о 🇹🇮🇲🇪🇴🇺🇹. 🇵🇱🇪🇦🇸🇪 🇸🇹🇦🇷🇹 🇦 🇳🇪🇼 🇬🇦🇲🇪.", show_alert=True)
         else:
             await callback_query.answer("An unexpected error occurred.", show_alert=True)
 
