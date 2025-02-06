@@ -56,7 +56,7 @@ async def register_chat(chat_id: str, chat_data: dict):
     return True
 
 @Client.on_message(filters.group & filters.command("start", CMD))
-async def start_game(client: Client, message: Message):
+async def start_group(client: Client, message: Message):
     user_id = str(message.from_user.id)
     user_data = {
         "first_name": message.from_user.first_name,
