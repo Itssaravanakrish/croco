@@ -137,7 +137,8 @@ async def scores_callback(client: Client, message: Message):
 
     # Check if the user is an admin or creator
     if await is_user_admin(client, chat_id, user_id):
-        total_user_scores = await db.total_scores(user_id)  # Use the database instance scores_in_current_chat = (
+        total_user_scores = await db.total_scores(user_id)  # Use the database instance
+        scores_in_current_chat = (
             await db.scores_in_chat(chat_id, user_id)  # Use the database instance
             if message.chat.type == ChatType.SUPERGROUP
             else "<code>not in group</code>"
