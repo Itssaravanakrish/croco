@@ -45,14 +45,17 @@ async def make_sure_in_game(client: Client, message: Message) -> bool:
 async def make_sure_not_in_game(client, message):
     game = await db.get_game(message.chat.id)  # Check if a game is ongoing
     if game:
-        raise Exception("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀ ꜱ ᴀʟʀᴇᴀᴅʏ ꜱᴛᴀʀᴛᴇᴅ! ᴅᴏ ɴᴏᴛ ʙʟᴀʙʙᴇʀ. 🤯")  # Simplified message
+        await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀ ꜱ ᴀʟʀᴇᴀᴅʏ ꜱᴛᴀʀᴛᴇᴅ! ᴅᴏ ɴᴏᴛ ʙʟᴀʙʙᴇʀ. 🤯")  # Notify the user
+        return True  # Indicate that the game is ongoing
+    return False  # No game is ongoing
 
 def requires_game_not_running(func):
     async def wrapper(client: Client, message: Message, *args, **kwargs):
-        await make_sure_not_in_game(client, message)  # Await the function call
+        if await make_sure_not_in_game(client, message):  # Check if a game is ongoing
+            return  # Exit if a game is ongoing
         return await func(client, message, *args, **kwargs)  # Await the wrapped function
     return wrapper
-
+    
 @requires_game_not_running
 async def new_game(client: Client, message: Message) -> bool:
     word = choice()  # Get a new word for the game
