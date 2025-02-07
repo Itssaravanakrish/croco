@@ -56,7 +56,6 @@ def requires_game_not_running(func):
         return await func(client, message, *args, **kwargs)  # Await the wrapped function
     return wrapper
     
-@requires_game_not_running
 async def new_game(client: Client, message: Message) -> bool:
     word = choice()  # Get a new word for the game
 
@@ -132,16 +131,29 @@ async def game_command(client: Client, message: Message):
 
     # Check if a game is already ongoing
     ongoing_game = await db.get_game(chat_id)  # Fetch the game state from the database
-    if ongoing_game:
-        host_name = ongoing_game["host"]["first_name"]  # Get the host's first name
-        await message.reply_text(f"A game is already ongoing, started by {host_name}.")  # Notify the user
-        return  # Exit if the game is ongoing
 
-    # Start a new game
+    if ongoing_game:
+        # Check if the game has timed out
+        if (time() - ongoing_game['start']) >= GAME_TIMEOUT:
+            # Game has timed out, start a new game
+            await handle_end_game(client, message)  # End the current game due to timeout
+            await new_game(client, message)  # Start a new game
+            return  # Exit after starting a new game
+
+        # If the game is ongoing and has not timed out
+        host_id = ongoing_game["host"]["id"]  # Get the host's ID
+        if message.from_user.id != host_id:
+            await message.reply_text("ᴛʜᴇ ɢᴀᴍᴇ ʜᴀꜱ ᴀʟʀᴇᴀᴅʏ ꜱᴛᴀʀᴛᴇᴅ! ᴅᴏ ɴᴏᴛ ʙʟᴀʙʙᴇʀ. 🤯")
+            return  # Exit if the user is not the host
+
+        # If the user is the host, do nothing (or you can send a message if needed)
+        return  # Exit if the game is already ongoing
+
+    # If no game is ongoing, start a new game
     await new_game(client, message)  # This function should contain your game initialization logic
 
     # Notify the group that the game has started
-    await message.reply_text("The game has started! 🎉", reply_markup=inline_keyboard_markup)  # Optionally show the keyboard
+    await message.reply_text(f"The game has started! {message.from_user.first_name} is explaining the word now.", reply_markup=inline_keyboard_markup)  # Show the keyboard
 
 @Client.on_message(filters.group & filters.command("score", CMD))
 async def scores_callback(client: Client, message: Message):
