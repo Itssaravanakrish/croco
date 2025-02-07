@@ -2,11 +2,8 @@ from time import time
 import logging
 import asyncio
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from pyrogram.enums import ChatType
-from words import choice
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from mongo.users_and_chats import db, ChatNotFoundError, UserNotFoundError
-from config import SUDO_USERS
 
 # Configure logging
 logging.basicConfig(
@@ -29,12 +26,12 @@ async def register_user(user_id: str, user_data: dict):
     """Register a user in the database."""
     try:
         await db.get_user(user_id)  # Attempt to retrieve the user
-        logging.info(f"User   {user_id} already exists in the database.")
+        logging.info(f"User  {user_id} already exists in the database.")
     except UserNotFoundError:
         # Add the user to the database if they are not already present
         try:
             await db.add_user(user_id, user_data)  # Add user to the database
-            logging.info(f"User   {user_id} added to the database.")
+            logging.info(f"User  {user_id} added to the database.")
         except Exception as e:
             logging.error(f"Failed to add user {user_id}: {e}")
             return False
