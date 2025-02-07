@@ -59,14 +59,24 @@ def requires_game_not_running(func):
 @requires_game_not_running
 async def new_game(client: Client, message: Message) -> bool:
     word = choice()  # Get a new word for the game
+
+    # Get the bot's ID
+    bot_info = await client.get_me()
+    bot_id = bot_info.id
+
+    # Ensure the host is not the bot
+    host_id = message.from_user.id
+    if host_id == bot_id:
+        return False  # Prevent the bot from being set as the host
+
     await db.set_game(message.chat.id, {  # Await the database call
         'start': time(),
         'host': {
-            'id': message.from_user.id,
+            'id': host_id,  # Set the host ID to the user starting the game
             'first_name': message.from_user.first_name,
             'username': message.from_user.username,
         },
-        'word': word,
+        'word': word,  # Set the word for the game
     })
     return True
 
