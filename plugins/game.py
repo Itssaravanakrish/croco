@@ -29,7 +29,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 # Inline keyboard for when the user opts to become a leader
 want_to_be_leader_keyboard = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton("ɪ ᴡᴀɴᴛ ᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙋‍♂", callback_data="start_new_game")]
+        [InlineKeyboardButton("ɪ ᴡᴀɴᴛ Tᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙋‍♂", callback_data="start_new_game")]
     ]
 )
 
@@ -196,31 +196,26 @@ async def end_now_callback(client: Client, callback_query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex("start_new_game"))
 async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
+    logging.info(f"Start new game button clicked by user: {callback_query.from_user.id} in chat: {callback_query.message.chat.id}")
     # Acknowledge the callback query
     await callback_query.answer()
-
     # Start a new game with the user who clicked the button as the host
-    success = await new_game(client, callback_query.message)  # Start a new game
+    await new_game(client, callback_query.message)  # Start a new game
+    # Retrieve the new game state to ensure it's set up correctly
+    new_game_state = await db.get_game(callback_query.message.chat.id)
 
-    if success:
-        # Retrieve the new game state to ensure it's set up correctly
-        new_game_state = await db.get_game(callback_query.message.chat.id)
-
-        if new_game_state:
-            # Delete the old message to clean up
-            await callback_query.message.delete()
-
-            # Notify that a new game has started
-            await client.send_message(
-                callback_query.message.chat.id,
-                f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
-                reply_markup=inline_keyboard_markup
-            )
-            await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
-        else:
-            await callback_query.answer("Failed to retrieve the new game state. Please try again.", show_alert=True)
+    if new_game_state:
+        # Delete the old message to clean up
+        await callback_query.message.delete()
+        # Notify that a new game has started
+        await client.send_message(
+            callback_query.message.chat.id,
+            f"Game started! [{callback_query.from_user.first_name}](tg://user?id={callback_query.from_user.id}) 🥳 is explaining the word now.",
+            reply_markup=inline_keyboard_markup  # Use your existing inline keyboard for the game
+        )
+        await callback_query.answer("A new game has started! You are the leader now.", show_alert=True)
     else:
-        await callback_query.answer("Failed to start a new game. Please try again.", show_alert=True)
+        await callback_query.answer("Failed to retrieve the new game state. Please try again.", show_alert=True)
 
 @Client.on_callback_query(filters.regex("view|next"))
 async def handle_view_next_callback(client: Client, callback_query: CallbackQuery):
