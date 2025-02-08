@@ -5,6 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from mongo.users_and_chats import db  # Import the database instance
 from config import SUDO_USERS
+from script import messages_en, messages_ta, messages_hi  # Import messages
 
 # Configure logging
 logging.basicConfig(
@@ -14,19 +15,28 @@ logging.basicConfig(
 
 CMD = ["/", "."]
 
+# Function to get messages based on the selected language
+def get_message(language, key, **kwargs):
+    if language == "en":
+        return messages_en[key].format(**kwargs)
+    elif language == "ta":
+        return messages_ta[key].format(**kwargs)
+    elif language == "hi":
+        return messages_hi[key].format(**kwargs)
+
 @Client.on_message(filters.command("alive", CMD))
 async def alive_callback(client: Client, message: Message):
     logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
-    await message.reply_text("I am alive and running! 💪")
+    await message.reply_text(get_message("en", "alive"))  # Change "en" to the desired language
 
 @Client.on_message(filters.command("ping", CMD))
 async def ping_callback(client: Client, message: Message):
-    await message.reply_text("Pong! 🏓")
+    await message.reply_text(get_message("en", "ping"))  # Change "en" to the desired language
 
 @Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
 async def broadcast_pm_callback(client: Client, message: Message):
     if len(message.command) < 2:
-        await message.reply_text("Please provide a message to broadcast.")
+        await message.reply_text(get_message("en", "provide_message"))  # Change "en" to the desired language
         return
 
     broadcast_message = " ".join(message.command[1:])
@@ -48,17 +58,13 @@ async def broadcast_pm_callback(client: Client, message: Message):
     pending_count = total_users - (success_count + fail_count)
 
     await message.reply_text(
-        f"Broadcast to PM completed!\n"
-        f"Total Users: {total_users}\n"
-        f"Success: {success_count}\n"
-        f"Failed: {fail_count}\n"
-        f"Pending: {pending_count}"
+        get_message("en", "broadcast_pm_success", total=total_users, success=success_count, failed=fail_count, pending=pending_count)  # Change "en" to the desired language
     )
 
 @Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
 async def broadcast_group_callback(client: Client, message: Message):
     if len(message.command) < 2:
-        await message.reply_text("Please provide a message to broadcast.")
+        await message.reply_text(get_message("en", "provide_message"))  # Change "en" to the desired language
         return
 
     broadcast_message = " ".join(message.command[1:])
@@ -80,11 +86,7 @@ async def broadcast_group_callback(client: Client, message: Message):
     pending_count = total_groups - (success_count + fail_count)
 
     await message.reply_text(
-        f"Broadcast to groups completed!\n"
-        f"Total Groups: {total_groups}\n"
-        f"Success: {success_count}\n"
-        f"Failed: {fail_count}\n"
-        f"Pending: {pending_count}"
+        get_message("en", "broadcast_group_success", total=total_groups, success=success_count, failed=fail_count, pending=pending_count)  # Change "en" to the desired language
     )
 
 @Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
@@ -93,11 +95,6 @@ async def stats_callback(client: Client, message: Message):
     chat_count = await db.get_chat_count()  # Get total chat count
     game_count = await db.get_game_count()  # Get total game count
 
-    stats_message = (
-        f"📊 **Bot Statistics**:\n"
-        f"👥 Total Users: {user_count}\n"
-        f"💬 Total Chats: {chat_count}\n"
-        f"🎮 Total Games Played: {game_count}\n"
-    )
+    stats_message = get_message("en", "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)  # Change "en" to the desired language
 
     await message.reply_text(stats_message)
