@@ -4,6 +4,7 @@ import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from mongo.users_and_chats import db, ChatNotFoundError, UserNotFoundError
+from script import messages_en, messages_ta, messages_hi  # Import messages
 
 # Configure logging
 logging.basicConfig(
@@ -12,7 +13,6 @@ logging.basicConfig(
 )
 
 CMD = ["/", "."]
-WELCOME_MESSAGE = "Welcome to our advanced Crocodile Game Bot! 🐊\n\nGet ready to have fun and challenge your friends!"
 
 # Define the inline keyboard for private messages
 inline_keyboard_markup_pm = InlineKeyboardMarkup(
@@ -21,6 +21,15 @@ inline_keyboard_markup_pm = InlineKeyboardMarkup(
         [InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ ᴏᴜʀ ɢʀᴏᴜᴘ 💖", url="https://t.me/Xtamilchat")]
     ]
 )
+
+# Function to get messages based on the selected language
+def get_message(language, key):
+    if language == "en":
+        return messages_en[key]
+    elif language == "ta":
+        return messages_ta[key]
+    elif language == "hi":
+        return messages_hi[key]
 
 async def register_user(user_id: str, user_data: dict):
     """Register a user in the database."""
@@ -60,8 +69,11 @@ async def start_group(client: Client, message: Message):
         "username": message.from_user.username,
     }
 
+    # Determine the language (default to English)
+    language = "en"  # You can modify this to get the user's preferred language
+
     if not await register_user(user_id, user_data):
-        await message.reply_text("An error occurred while adding you to the database. Please try again later.")
+        await message.reply_text(get_message(language, "error_registering_user"))
         return
 
     chat_id = str(message.chat.id)
@@ -71,11 +83,11 @@ async def start_group(client: Client, message: Message):
     }
 
     if not await register_chat(chat_id, chat_data):
-        await message.reply_text("An error occurred while adding the chat to the database. Please try again later.")
+        await message.reply_text(get_message(language, "error_registering_chat"))
         return
 
     await message.reply_text(
-        WELCOME_MESSAGE,
+        get_message(language, "welcome"),
         reply_markup=inline_keyboard_markup_pm  # Use the existing inline keyboard for private messages
     )
 
@@ -87,11 +99,14 @@ async def start_private(client: Client, message: Message):
         "username": message.from_user.username,
     }
 
+    # Determine the language (default to English)
+    language = "en"  # You can modify this to get the user's preferred language
+
     if not await register_user(user_id, user_data):
-        await message.reply_text("An error occurred while adding you to the database. Please try again later.")
+        await message.reply_text(get_message(language, "error_registering_user"))
         return
 
     await message.reply_text(
-        WELCOME_MESSAGE,
+        get_message(language, "welcome"),
         reply_markup=inline_keyboard_markup_pm  # Optional: You can include an inline keyboard if needed
     )
