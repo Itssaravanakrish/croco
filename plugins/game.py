@@ -69,55 +69,89 @@ async def game_command(client: Client, message: Message):
     chat_id = str(message.chat.id)
     ongoing_game = await db.get_game(chat_id)
 
+    # Determine the user's preferred language (default to English)
+    user_id = str(message.from_user.id)
+    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
+    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+
     if ongoing_game:
         if (time() - ongoing_game['start']) >= GAME_TIMEOUT:
             await handle_end_game(client, message)
-            await new_game(client, message)  # Start a new game
+            await new_game(client, message, language)  # Start a new game
             return
 
         host_id = ongoing_game["host"]["id"]
         if message.from_user.id != host_id:
-            await message.reply_text(get_message("en", "game_already_started"))  # Change "en" to the desired language
+            await message.reply_text(get_message(language, "game_already_started"))  # Use the localized message
             return
 
         return
 
-    await new_game(client, message)  # Start a new game
-
-@Client.on_message(filters.group & filters.command("settings", CMD))
-async def settings_command(client: Client, message: Message):
-    await message.reply_text(get_message("en", "settings_option"))  # Change "en" to the desired language
+    await new_game(client, message, language)  # Start a new game
 
 @Client.on_callback_query(filters.regex("start_new_game"))
 async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()
-    await new_game(client, callback_query.message, language="en")  # Change "en" to the desired language
+
+    # Determine the user's preferred language (default to English)
+    user_id = str(callback_query.from_user.id)
+    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
+    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+
+    # Start a new game with the user who clicked the button as the host
+    await new_game(client, callback_query.message, language=language)  # Pass the determined language
+
+    # Retrieve the new game state to ensure it's set up correctly
+    new_game_state = await db.get_game(callback_query.message.chat.id)
+
+    if new_game_state:
+        # Delete the old message to clean up
+        await callback_query.message.delete()
+        # Notify that a new game has started
+        await client.send_message(
+            callback_query.message.chat.id,
+            get_message(language, "game_started", name=callback_query.from_user.first_name),  # Use the localized message
+            reply_markup=inline_keyboard_markup  # Use your existing inline keyboard for the game
+        )
+        await callback_query.answer(get_message(language, "new_game_started"), show_alert=True)  # Notify the user
+    else:
+        await callback_query.answer(get_message(language, "failed_to_start_game"), show_alert=True)  # Notify failure
 
 @Client.on_callback_query(filters.regex("end_game"))
 async def end_now_callback(client: Client, callback_query: CallbackQuery):
+    # Determine the user's preferred language (default to English)
+    user_id = str(callback_query.from_user.id)
+    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
+    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+
     game = await db.get_game(callback_query.message.chat.id)
 
     if game:
         if callback_query.from_user.id == game['host']['id']:
             await handle_end_game(client, callback_query.message)
             await callback_query.message.delete()
-            await client.send_message(callback_query.message.chat.id, get_message("en", "game_already_started"))  # Change "en" to the desired language
-            await callback_query.answer("The game has been ended.", show_alert=True)
+            await client.send_message(callback_query.message.chat.id, get_message(language, "game_ended"))  # Use the localized message
+            await callback_query.answer(get_message(language, "game_ended_confirmation"), show_alert=True)  # Notify the user
         else:
-            await callback_query.answer("You are not the leader. You cannot end the game.", show_alert=True)
+            await callback_query.answer(get_message(language, "not_leader"), show_alert=True)  # Use the localized message
     else:
-        await callback_query.answer("The game is already ended.", show_alert=True)
+        await callback_query.answer(get_message(language, "no_game_ongoing"), show_alert=True)  # Use the localized message
 
 @Client.on_message(filters.group & filters.command("end", CMD))
 async def end_game_callback(client: Client, message: Message):
+    # Determine the user's preferred language (default to English)
+    user_id = str(message.from_user.id)
+    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
+    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+
     game = await db.get_game(message.chat.id)
     if game:
-        if game['host']['id'] == message.from_user.id:
+        if game['host']['id'] == user_id:
             if await handle_end_game(client, message):
-                await message.reply_text(get_message("en", "game_already_started"))  # Change "en" to the desired language
+                await message.reply_text(get_message(language, "game_ended"))  # Use the localized message for game ended
             else:
-                await message.reply_text("An error occurred while trying to end the game. Please try again.")
+                await message.reply_text(get_message(language, "error_ending_game"))  # Use the localized error message
         else:
-            await message.reply_text("You are not the host or there is no game to end.")
+            await message.reply_text(get_message(language, "not_host"))  # Use the localized message for not being the host
     else:
-        await message.reply_text("There is no game ongoing to end.")
+        await message.reply_text(get_message(language, "no_game_ongoing"))  # Use the localized message for no game ongoing
