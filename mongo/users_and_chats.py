@@ -72,7 +72,21 @@ class Database:
         if user is None:
             raise UserNotFoundError(f"User  with ID {user_id} not found.")
         return user
+        
+    async def set_user_language(self, user_id: str, language: str) -> None:
+        """Set the user's preferred language."""
+        await self.users_collection.update_one(
+            {"user_id": user_id},
+            {"$set": {"language": language}},
+            upsert=True
+        )
+        logging.info(f"User  {user_id} language set to {language}.")
 
+    async def get_user_language(self, user_id: str) -> str:
+        """Get the user's preferred language."""
+        user = await self.get_user(user_id)
+        return user.get("language", "en")  # Default to English if not set
+    
     async def total_scores(self, user_id: str) -> int:
         """Calculate total scores for the user."""
         # Implement your logic to calculate total scores here
