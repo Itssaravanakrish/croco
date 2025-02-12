@@ -1,11 +1,10 @@
-from time import time
 import logging
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from mongo.users_and_chats import db  # Import the database instance
 from config import SUDO_USERS
-from script import messages_en, messages_ta, messages_hi  # Import messages
+from utils import UserSettings  # Import UserSettings from utils
 
 # Configure logging
 logging.basicConfig(
@@ -15,28 +14,28 @@ logging.basicConfig(
 
 CMD = ["/", "."]
 
-# Function to get messages based on the selected language
-def get_message(language, key, **kwargs):
-    if language == "en":
-        return messages_en[key].format(**kwargs)
-    elif language == "ta":
-        return messages_ta[key].format(**kwargs)
-    elif language == "hi":
-        return messages_hi[key].format(**kwargs)
-
 @Client.on_message(filters.command("alive", CMD))
 async def alive_callback(client: Client, message: Message):
+    user_id = str(message.from_user.id)
+    user_settings = UserSettings(user_id)
+    language = await user_settings.get_language()  # Fetch the user's preferred language
     logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
-    await message.reply_text(get_message("en", "alive"))  # Change "en" to the desired language
+    await message.reply_text(await get_message(language, "alive"))  # Use the user's language
 
 @Client.on_message(filters.command("ping", CMD))
 async def ping_callback(client: Client, message: Message):
-    await message.reply_text(get_message("en", "ping"))  # Change "en" to the desired language
+    user_id = str(message.from_user.id)
+    user_settings = UserSettings(user_id)
+    language = await user_settings.get_language()  # Fetch the user's preferred language
+    await message.reply_text(await get_message(language, "ping"))  # Use the user's language
 
 @Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
 async def broadcast_pm_callback(client: Client, message: Message):
     if len(message.command) < 2:
-        await message.reply_text(get_message("en", "provide_message"))  # Change "en" to the desired language
+        user_id = str(message.from_user.id)
+        user_settings = UserSettings(user_id)
+        language = await user_settings.get_language()  # Fetch the user's preferred language
+        await message.reply_text(await get_message(language, "provide_message"))  # Use the user's language
         return
 
     broadcast_message = " ".join(message.command[1:])
@@ -57,14 +56,21 @@ async def broadcast_pm_callback(client: Client, message: Message):
 
     pending_count = total_users - (success_count + fail_count)
 
+    user_id = str(message.from_user.id)
+    user_settings = UserSettings(user_id)
+    language = await user_settings.get_language()  # Fetch the user's preferred language
+
     await message.reply_text(
-        get_message("en", "broadcast_pm_success", total=total_users, success=success_count, failed=fail_count, pending=pending_count)  # Change "en" to the desired language
+        await get_message(language, "broadcast_pm_success", total=total_users, success=success_count, failed=fail_count, pending=pending_count)  # Use the user's language
     )
 
 @Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
 async def broadcast_group_callback(client: Client, message: Message):
     if len(message.command) < 2:
-        await message.reply_text(get_message("en", "provide_message"))  # Change "en" to the desired language
+        user_id = str(message.from_user.id)
+        user_settings = UserSettings(user_id)
+        language = await user_settings.get_language()  # Fetch the user's preferred language
+        await message.reply_text(await get_message(language, "provide_message"))  # Use the user's language
         return
 
     broadcast_message = " ".join(message.command[1:])
@@ -85,16 +91,24 @@ async def broadcast_group_callback(client: Client, message: Message):
 
     pending_count = total_groups - (success_count + fail_count)
 
+    user_id = str(message.from_user.id)
+    user_settings = UserSettings(user_id)
+    language = await user_settings.get_language()  # Fetch the user's preferred language
+
     await message.reply_text(
-        get_message("en", "broadcast_group_success", total=total_groups, success=success_count, failed=fail_count, pending=pending_count)  # Change "en" to the desired language
+        await get_message(language, "broadcast_group_success", total=total_groups, success=success_count, failed=fail_count, pending=pending_count)  # Use the user's language
     )
 
 @Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
 async def stats_callback(client: Client, message: Message):
+    user_id = str(message.from_user.id)
+    user_settings = UserSettings(user_id)
+    language = await user_settings.get_language()  # Fetch the user's preferred language
+
     user_count = await db.get_user_count()  # Get total user count
     chat_count = await db.get_chat_count()  # Get total chat count
     game_count = await db.get_game_count()  # Get total game count
 
-    stats_message = get_message("en", "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)  # Change "en" to the desired language
+    stats_message = await get_message(language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)  # Use the user's language
 
     await message.reply_text(stats_message)
