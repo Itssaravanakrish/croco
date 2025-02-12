@@ -5,7 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from words import choice
 from mongo.users_and_chats import db
-from script import messages_en, messages_ta, messages_hi  # Import messages
+from utils import get_message, register_user, register_chat
 
 # Configure logging
 logging.basicConfig(
@@ -32,13 +32,6 @@ want_to_be_leader_keyboard = InlineKeyboardMarkup(
     ]
 )
 
-async def get_message(language, key, **kwargs):
-    if language == "en":
-        return messages_en[key].format(**kwargs)
-    elif language == "ta":
-        return messages_ta[key].format(**kwargs)
-    elif language == "hi":
-        return messages_hi[key].format(**kwargs)
 
 async def new_game(client: Client, message: Message, language="en") -> bool:
     word = choice()  # Get a new word for the game
