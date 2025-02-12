@@ -1,40 +1,57 @@
 import logging
-from mongo.users_and_chats import db  # Import your database instance
-from script import messages_en, messages_ta, messages_hi  # Import your message dictionaries
+from typing import Dict, Optional
+from mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError
 
-async def get_message(language, key, **kwargs):
-    """Fetch a message based on the language and key."""
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+async def get_message(language: str, key: str) -> str:
+    """Fetch localized message based on language."""
     try:
         if language == "en":
-            return messages_en[key].format(**kwargs)
+            from script import messages_en
+            return getattr(messages_en, key, "Message not found")
         elif language == "ta":
-            return messages_ta[key].format(**kwargs)
+            from script import messages_ta
+            return getattr(messages_ta, key, "Message not found")
         elif language == "hi":
-            return messages_hi[key].format(**kwargs)
+            from script import messages_hi
+            return getattr(messages_hi, key, "Message not found")
         else:
-            logging.error(f"Unsupported language: {language}.")
-            return messages_en[key].format(**kwargs)  # Fallback to English
-    except KeyError:
-        logging.error(f"Message key '{key}' not found for language '{language}'.")
-        return messages_en.get("message_not_found", "Message not found.")  # Fallback message
+            return "Invalid language"
+    except ImportError:
+        logging.error("Language module not found")
+        return "Message not found"
 
-class UserSettings:
-    def __init__(self, user_id: str):
-        self.user_id = user_id
-
-    async def set_language(self, language: str) -> None:
-        """Set the user's preferred language."""
-        if language not in ["en", "ta", "hi"]:
-            raise ValueError("Invalid language code. Must be 'en', 'ta', or 'hi'.")
-        
-        await db.set_user_language(self.user_id, language)  # Assuming you have this method in your db
-        logging.info(f"User  {self.user_id} language set to {language}.")
-
-    async def get_language(self) -> str:
-        """Get the user's preferred language."""
+async def register_user(user_id: str, user_data: Dict) -> bool:
+    """Register a user in the database."""
+    try:
+        await db.get_user(user_id)
+        logging.info(f"User {user_id} already exists.")
+        return True
+    except UserNotFoundError:
         try:
-            language = await db.get_user_language(self.user_id)  # Fetch the user's language preference
-            return language
+            await db.add_user(user_id, user_data)
+            logging.info(f"User {user_id} registered.")
+            return True
         except Exception as e:
-            logging.error(f"Failed to get language for user {self.user_id}: {e}")
-            return "en"  # Default to English if there's an error
+            logging.error(f"Failed to register user {user_id}: {e}")
+            return False
+
+async def register_chat(chat_id: str, chat_data: Dict) -> bool:
+    """Register a chat in the database."""
+    try:
+        await db.get_chat(chat_id)
+        logging.info(f"Chat {chat_id} already exists.")
+        return True
+    except ChatNotFoundError:
+        try:
+            await db.add_chat(chat_id, chat_data)
+            logging.info(f"Chat {chat_id} registered.")
+            return True
+        except Exception as e:
+            logging.error(f"Failed to register chat {chat_id}: {e}")
+            return False
