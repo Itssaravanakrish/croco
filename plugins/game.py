@@ -1,6 +1,5 @@
 from time import time
 import logging
-import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from words import choice
@@ -61,7 +60,7 @@ async def game_command(client: Client, message: Message):
     # Determine the user's preferred language (default to English)
     user_id = str(message.from_user.id)
     user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
-    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+    language = user_language if user_language in ["en", "ta ", "hi"] else "en"  # Fallback to English if not set
 
     if ongoing_game:
         if (time() - ongoing_game['start']) >= GAME_TIMEOUT:
