@@ -1,12 +1,10 @@
 import logging
 import asyncio
-from time import time
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import Message
 from mongo.users_and_chats import db  # Import the database instance
 from config import SUDO_USERS
-from utils import get_message, register_user, register_chat
-from words import choice  # Assuming words is a module that provides a choice function
+from utils import get_message  # Import get_message from utils
 
 # Configure logging
 logging.basicConfig(
@@ -15,134 +13,87 @@ logging.basicConfig(
 )
 
 CMD = ["/", "."]
-GAME_TIMEOUT = 300  # Timeout duration in seconds
 
-# Inline keyboard for the game
-inline_keyboard_markup = InlineKeyboardMarkup(
-    [
-        [InlineKeyboardButton("ꜱᴇᴇ ᴡᴏʀᴅ 👀", callback_data="view"),
-         InlineKeyboardButton("ɴᴇxᴛ ᴡᴏʀᴅ 🔄", callback_data="next")],
-        [InlineKeyboardButton("ɪ ᴅᴏɴ'ᴛ ᴡᴀɴᴛ ᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ🙅‍♂", callback_data="end_game")]
-    ]
-)
-
-async def new_game(client: Client, message: Message, language="en") -> bool:
-    word = choice()  # Get a new word for the game
-
-    # Get the bot's ID
-    bot_info = await client.get_me()
-    bot_id = bot_info.id
-
-    # Ensure the host is not the bot
-    host_id = message.from_user.id
-    if host_id == bot_id:
-        return False  # Prevent the bot from being set as the host
-
-    await db.set_game(message.chat.id, {
-        'start': time(),
-        'host': {
-            'id': host_id,
-            'first_name': message.from_user.first_name,
-            'username': message.from_user.username,
-        },
-        'word': word,
-    })
-    await message.reply_text(get_message(language, "game_started", name=message.from_user.first_name), reply_markup=inline_keyboard_markup)
-    return True
-
-@Client.on_message(filters.group & filters.command("game", CMD))
-async def game_command(client: Client, message: Message):
-    chat_id = str(message.chat.id)
-    ongoing_game = await db.get_game(chat_id)
-
-    # Determine the user's preferred language (default to English)
+@Client.on_message(filters.command("alive", CMD))
+async def alive_callback(client: Client, message: Message):
     user_id = str(message.from_user.id)
-    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
-    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+    language = "en"  # Default language, you can modify this to fetch from user settings
+    logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
+    await message.reply_text(await get_message(language, "alive"))  # Use the user's language
 
-    if ongoing_game:
-        if (time() - ongoing_game['start']) >= GAME_TIMEOUT:
-            await handle_end_game(client, message)
-            await new_game(client, message, language)  # Start a new game
-            return
+@Client.on_message(filters.command("ping", CMD))
+async def ping_callback(client: Client, message: Message):
+    user_id = str(message.from_user.id)
+    language = "en"  # Default language
+    await message.reply_text(await get_message(language, "ping"))  # Use the user's language
 
-        host_id = ongoing_game["host"]["id"]
-        if message.from_user.id != host_id:
-            await message.reply_text(get_message(language, "game_already_started"))  # Use the localized message
-            return
-
+@Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
+async def broadcast_pm_callback(client: Client, message: Message):
+    if len(message.command) < 2:
+        language = "en"  # Default language
+        await message.reply_text(await get_message(language, "provide_message"))  # Use the user's language
         return
 
-    await new_game(client, message, language)  # Start a new game
+    broadcast_message = " ".join(message.command[1:])
+    user_ids = await db.get_all_user_ids()  # Fetch user IDs from the database
 
-@Client.on_callback_query(filters.regex("start_new_game"))
-async def start_new_game_callback(client: Client, callback_query: CallbackQuery):
-    await callback_query.answer()
+    total_users = len(user_ids)
+    success_count = 0
+    fail_count = 0
 
-    # Determine the user's preferred language (default to English)
-    user_id = str(callback_query.from_user.id)
-    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
-    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+    for user_id in user_ids:
+        try:
+            await client.send_message(user_id, broadcast_message)
+            success_count += 1
+            await asyncio.sleep(0.1)  # Adding delay to prevent hitting rate limits
+        except Exception as e:
+            logging.error(f"Failed to send message to user {user_id}: {e}")
+            fail_count += 1
 
-    # Start a new game with the user who clicked the button as the host
-    await new_game(client, callback_query.message, language=language)  # Pass the determined language
+    pending_count = total_users - (success_count + fail_count)
 
-    # Retrieve the new game state to ensure it's set up correctly
-    new_game_state = await db.get_game(callback_query.message.chat.id)
+    await message.reply_text(
+        await get_message(language, "broadcast_pm_success", total=total_users, success=success_count, failed=fail_count, pending=pending_count)  # Use the user's language
+    )
 
-    if new_game_state:
-        # Delete the old message to clean up
-        await callback_query.message.delete()
-        # Notify that a new game has started
-        await client.send_message(
-            callback_query.message.chat.id,
-            get_message(language, "game_started", name=callback_query.from_user.first_name),  # Use the localized message
-            reply_markup=inline_keyboard_markup  # Use your existing inline keyboard for the game
-        )
-        await callback_query.answer(get_message(language, "new_game_started"), show_alert=True)  # Notify the user
-    else:
-        await callback_query.answer(get_message(language, "failed_to_start_game"), show_alert=True)  # Notify failure
+@Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
+async def broadcast_group_callback(client: Client, message: Message):
+    if len(message.command) < 2:
+        language = "en"  # Default language
+        await message.reply_text(await get_message(language, "provide_message"))  # Use the user's language
+        return
 
-@Client.on_callback_query(filters.regex("end_game"))
-async def end_now_callback(client: Client, callback_query: CallbackQuery):
-    # Determine the user's preferred language (default to English)
-    user_id = str(callback_query.from_user.id)
-    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
-    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+    broadcast_message = " ".join(message.command[1:])
+    group_ids = await db.get_all_group_ids()  # Fetch group IDs from the database
 
-    game = await db.get_game(callback_query.message.chat.id)
+    total_groups = len(group_ids)
+    success_count = 0
+    fail_count = 0
 
-    if game:
-        if callback_query.from_user.id == game['host']['id']:
-            await handle_end_game(client, callback_query.message)
-            await callback_query.message.delete()
-            await client.send_message(callback_query.message.chat.id, get_message(language, "game_ended"))  # Use the localized message
-            await callback_query.answer(get_message(language, "game_ended_confirmation"), show_alert=True)  # Notify the user
-        else:
-            await callback_query.answer(get_message(language, "not_leader"), show_alert=True)  # Use the localized message
-    else:
-        await callback_query.answer(get_message(language, "no_game_ongoing"), show_alert=True)  # Use the localized message
+    for group_id in group_ids:
+        try:
+            await client.send_message(group_id, broadcast_message)
+            success_count += 1
+            await asyncio.sleep(0.1)  # Adding delay to prevent hitting rate limits
+        except Exception as e:
+            logging.error(f"Failed to send message to group {group_id}: {e}")
+            fail_count += 1
 
-@Client.on_message(filters.group & filters.command("end", CMD))
-async def end_game_callback(client: Client, message: Message):
-    # Determine the user's preferred language (default to English)
+    pending_count = total_groups - (success_count + fail_count)
+
+    await message.reply_text(
+        await get_message(language, "broadcast_group_success", total=total_groups, success=success_count, failed=fail_count, pending=pending_count)  # Use the user's language
+    )
+
+@Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
+async def stats_callback(client: Client, message: Message):
     user_id = str(message.from_user.id)
-    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference from the database
-    language = user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+    language = "en"  # Default language
 
-    game = await db.get_game(message.chat.id)
-    if game:
-        if game['host']['id'] == user_id:
-            if await handle_end_game(client, message):
-                await message.reply_text(get_message(language, "game_ended"))  # Use the localized message for game ended
-            else:
-                await message.reply_text(get_message(language, "error_ending_game"))  # Use the localized error message
-        else:
-            await message.reply_text(get_message(language, "not_host"))  # Use the localized message for not being the host
-    else:
-        await message.reply_text(get_message(language, "no_game_ongoing"))  # Use the localized message for no game ongoing
+    user_count = await db.get_user_count()  # Get total user count
+    chat_count = await db.get_chat_count()  # Get total chat count
+    game_count = await db.get_game_count()  # Get total game count
 
-async def handle_end_game(client: Client, message: Message):
-    # Logic to handle ending the game
-    chat_id = message.chat.id
-    await db.remove_game(chat_id) 
+    stats_message = await get_message(language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)  # Use the user's language
+
+    await message.reply_text(stats_message)
