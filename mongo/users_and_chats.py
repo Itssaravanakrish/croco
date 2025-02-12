@@ -85,7 +85,7 @@ class Database:
     async def get_user_language(self, user_id: str) -> str:
         """Get the user's preferred language."""
         user = await self.get_user(user_id)
-        return user.get("language", "en")  # Default to English if not set
+        return user.get("language ", "en")  # Default to English if not set
     
     async def total_scores(self, user_id: str) -> int:
         """Calculate total scores for the user."""
