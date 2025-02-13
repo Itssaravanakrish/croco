@@ -87,14 +87,14 @@ async def settings_callback(client: Client, callback_query: CallbackQuery):
     
     # Check if the user is an admin or owner
     if not await is_user_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
-        await callback_query.answer(await get_message("en", "not_admin"), show_alert=True)  # Localized message for not being an admin
+        await callback_query.answer(await get_message("en", "not_admin"), show_alert=True)
         return
 
     # Send settings options
     await callback_query.message.reply_text(await get_message("en", "settings_option"), reply_markup=InlineKeyboardMarkup([
         [InlineKeyboardButton("Change Language 🌐", callback_data="change_language")],
         [InlineKeyboardButton("Change Game Mode 🎮", callback_data="change_game_mode")],
-        [InlineKeyboardButton("Back 🔙", callback_data="back_settings")]  # Back button
+        [InlineKeyboardButton("Back 🔙", callback_data="back_settings")]
     ]))
 
 @Client.on_callback_query(filters.regex("change_language"))
