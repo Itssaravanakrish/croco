@@ -27,6 +27,8 @@ messages_en = {
     "game_mode_set": "Game mode has been set to {mode}.",  # Message for setting game mode
     "invalid_mode": "Invalid game mode selected. Please choose from Easy, Hard, or Adult.",  # Message for invalid mode
     "language_set": "Group language has been set to {language}.",  # Message for setting group language
+    "back": "Going back to the previous menu.",
+    "close": "The menu has been closed.",
 }
 
 # Tamil Messages
@@ -51,6 +53,9 @@ messages_ta = {
     "game_mode_set": "விளையாட்டு முறை {mode} ஆக அமைக்கப்பட்டுள்ளது.",  # Message for setting game mode in Tamil
     "invalid_mode": "தவறான விளையாட்டு முறை தேர்ந்தெடுக்கப்பட்டுள்ளது. தயவுசெய்து எளிதான, கடினமான அல்லது பெரியவனாக தேர்ந்தெடுக்கவும்.",  # Message for invalid mode in Tamil
     "language_set": "குழு மொழி {language} ஆக அமைக்கப்பட்டுள்ளது.",  # Message for setting group language in Tamil
+    "back": "முந்தைய மெனுவுக்கு திரும்புகிறேன்.",
+    "close": "மெனு மூடப்பட்டுள்ளது.",
+
 }
 
 # Hindi Messages
@@ -76,4 +81,6 @@ messages_hi = {
     "game_mode_set": "खेल मोड {mode} पर सेट किया गया है।",  # Message for setting game mode in Hindi
     "invalid_mode": "अमान्य खेल मोड चुना गया है। कृपया आसान, कठिन, या वयस्क में से चुनें।",  # Message for invalid mode in Hindi
     "language_set": "समूह भाषा {language} पर सेट की गई है।",  # Message for setting group language in Hindi
+    "back": "पिछले मेनू में वापस जा रहा हूँ।",
+    "close": "मेनू बंद कर दिया गया है।",
 }
