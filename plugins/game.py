@@ -4,7 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from words import choice
 from mongo.users_and_chats import db
-from utils import get_message, is_user_admin  # Assuming get_message and is_user_admin are defined in utils.py
+from utils import get_message, is_user_admin 
 
 # Configure logging
 logging.basicConfig(
@@ -59,7 +59,7 @@ async def game_command(client: Client, message: Message):
     ongoing_game = await db.get_game(chat_id)
 
     user_id = str(message.from_user.id)
-    language = await get_user_language(user_id)  # Use the existing function
+    language = await db.get_group_language(chat_id)  # Use group language
     game_mode = await db.get_group_game_mode(chat_id)  # Fetch the group's game mode from the database
 
     if ongoing_game:
@@ -80,7 +80,7 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()
 
     user_id = str(callback_query.from_user.id)
-    language = await get_user_language(user_id)  # Use the existing function
+    language = await db.get_group_language(callback_query.message.chat.id)  # Use group language
 
     game = await db.get_game(callback_query.message.chat.id)
 
@@ -114,7 +114,7 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
 @Client.on_message(filters.group & filters.command("set_mode", CMD))
 async def set_game_mode(client: Client, message: Message):
     user_id = str(message.from_user.id)
-    language = await get_user_language(user_id)  # Use the existing function
+    language = await db.get_group_language(message.chat.id)  # Use group language
 
     if not await is_user_admin(client, message.chat.id, user_id):  # Check if the user is an admin
         await message.reply_text(await get_message(language, "not_admin"))
@@ -130,6 +130,6 @@ async def set_game_mode(client: Client, message: Message):
 
 async def handle_end_game(client: Client, message: Message):
     chat_id = message.chat.id
-    await db.remove_game(chat_id)
+    await db.remove_game(chat_id)  # Ensure this method is defined in your Database class
     await message.reply_text(await get_message(language, "game_ended"))  # Notify that the game has ended
     return True
