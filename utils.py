@@ -10,14 +10,19 @@ logging.basicConfig(
 )
 
 
-async def get_message(language: str, key: str) -> str:
+async def get_message(language: str, key: str, **kwargs) -> str:
     """Fetch localized message based on language."""
     messages = {
         "en": messages_en,
         "ta": messages_ta,
         "hi": messages_hi
     }
-    return messages.get(language, {}).get(key, "Message not found")
+    
+    # Get the message template
+    message_template = messages.get(language, {}).get(key, "Message not found")
+    
+    # Format the message with any additional keyword arguments
+    return message_template.format(**kwargs)
 
 async def register_user(user_id: str, user_data: Dict) -> bool:
     """Register a user in the database."""
