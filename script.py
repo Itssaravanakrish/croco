@@ -1,8 +1,8 @@
 # script.py
 
 # Function to handle language retrieval
-def get_user_language(user_language):
-    return user_language if user_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
+def get_group_language(group_language):
+    return group_language if group_language in ["en", "ta", "hi"] else "en"  # Fallback to English if not set
 
 # English Messages
 messages_en = {
@@ -17,7 +17,6 @@ messages_en = {
     "error_ending_game": "An error occurred while trying to end the game. Please try again.",
     "game_already_started": "The game has already started! Do not blabber. 🤯",
     "settings_option": "Choose an option:",
-    "error_registering_user": "An error occurred while registering the user. Please try again.",
     "error_registering_chat": "An error occurred while registering the chat. Please try again.",
     "ping": "Pong! 🏓 The bot is alive and responding!",
     "alive": "I am alive! 🤖",
@@ -25,6 +24,9 @@ messages_en = {
     "broadcast_pm_success": "Broadcast completed! Total: {total}, Success: {success}, Failed: {failed}, Pending: {pending}.",
     "broadcast_group_success": "Group broadcast completed! Total: {total}, Success: {success}, Failed: {failed}, Pending: {pending}.",
     "stats": "User  Count: {user_count}, Chat Count: {chat_count}, Game Count: {game_count}.",
+    "game_mode_set": "Game mode has been set to {mode}.",  # Message for setting game mode
+    "invalid_mode": "Invalid game mode selected. Please choose from Easy, Hard, or Adult.",  # Message for invalid mode
+    "language_set": "Group language has been set to {language}.",  # Message for setting group language
 }
 
 # Tamil Messages
@@ -40,14 +42,15 @@ messages_ta = {
     "error_ending_game": "விளையாட்டை முடிக்க முயற்சிக்கும் போது பிழை ஏற்பட்டது. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
     "game_already_started": "விளையாட்டு ஏற்கனவே தொடங்கியுள்ளது! பேச வேண்டாம். 🤯",
     "settings_option": "ஒரு விருப்பத்தை தேர்ந்தெடுக்கவும்:",
-    "error_registering_user": "பயனரை பதிவு செய்யும்போது பிழை ஏற்பட்டது. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
     "error_registering_chat": "சாட் பதிவு செய்யும்போது பிழை ஏற்பட்டது. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
     "ping": "பாங்! 🏓 பாட்டி உயிருடன் உள்ளது மற்றும் பதிலளிக்கிறது!",
     "alive": "நான் உயிருடன் இருக்கிறேன்! 🤖",
     "provide_message": "பிரசுரிக்க ஒரு செய்தியை வழங்கவும்.",
     "broadcast_pm_success": "பிரசுரிப்பு முடிந்தது! மொத்தம்: {total}, வெற்றி: {success}, தோல்வி: {failed}, நிலுவையில்: {pending}.",
-    "broadcast_group_success": "குழு பிரசுரிப்பு முடிந்தது! மொத்தம்: {total}, வெற்றி: {success}, தோல்வி: {failed}, நிலுவையில்: {pending}.",
-    "stats": "பயனர் எண்ணிக்கை: {user_count}, சாட் எண்ணிக்கை: {chat_count}, விளையாட்டு எண்ணிக்கை: {game_count}.",
+    "broadcast_group_success": "குழு பிரசுரிப்பு முடிந்தது! மொத்தம்: {total}, வெற்றி: {success}, தோல்வி: {failed}, நில ுவையில்: {pending}.",
+    "game_mode_set": "விளையாட்டு முறை {mode} ஆக அமைக்கப்பட்டுள்ளது.",  # Message for setting game mode in Tamil
+    "invalid_mode": "தவறான விளையாட்டு முறை தேர்ந்தெடுக்கப்பட்டுள்ளது. தயவுசெய்து எளிதான, கடினமான அல்லது பெரியவனாக தேர்ந்தெடுக்கவும்.",  # Message for invalid mode in Tamil
+    "language_set": "குழு மொழி {language} ஆக அமைக்கப்பட்டுள்ளது.",  # Message for setting group language in Tamil
 }
 
 # Hindi Messages
@@ -63,7 +66,6 @@ messages_hi = {
     "error_ending_game": "खेल समाप्त करने का प्रयास करते समय एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
     "game_already_started": "खेल पहले से ही शुरू हो चुका है! बकवास मत करो। 🤯",
     "settings_option": "एक विकल्प चुनें:",
-    "error_registering_user": "उपयोगकर्ता को पंजीकृत करते समय एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
     "error_registering_chat": "चैट को पंजीकृत करते समय एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
     "ping": "पोंग! 🏓 बॉट जीवित है और प्रतिक्रिया दे रहा है!",
     "alive": "मैं जीवित हूँ! 🤖",
@@ -71,4 +73,7 @@ messages_hi = {
     "broadcast_pm_success": "प्रसारण पूरा हुआ! कुल: {total}, सफल: {success}, विफल: {failed}, लंबित: {pending}.",
     "broadcast_group_success": "समूह प्रसारण पूरा हुआ! कुल: {total}, सफल: {success}, विफल: {failed}, लंबित: {pending}.",
     "stats": "उपयोगकर्ता संख्या: {user_count}, चैट संख्या: {chat_count}, खेल संख्या: {game_count}.",
+    "game_mode_set": "खेल मोड {mode} पर सेट किया गया है।",  # Message for setting game mode in Hindi
+    "invalid_mode": "अमान्य खेल मोड चुना गया है। कृपया आसान, कठिन, या वयस्क में से चुनें।",  # Message for invalid mode in Hindi
+    "language_set": "समूह भाषा {language} पर सेट की गई है।",  # Message for setting group language in Hindi
 }
