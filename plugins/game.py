@@ -77,7 +77,7 @@ async def game_command(client: Client, message: Message):
 
 @Client.on_callback_query(filters.regex("view|next|end_game"))
 async def game_action_callback(client: Client, callback_query: CallbackQuery):
-    await callback_query.answer()
+    await callback_query.answer()  # Acknowledge the callback query
 
     user_id = str(callback_query.from_user.id)
     language = await db.get_group_language(callback_query.message.chat.id)  # Use group language
@@ -106,9 +106,9 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
 
     elif callback_query.data == "end_game":
         if user_id == host_id:
-            await handle_end_game(client, callback_query.message)
+            await handle_end_game(client, callback_query.message, language)
             await callback_query.message.delete()
-            await client.send_message(callback_query.message.chat.id, await get_message(language, "game_ended"))  # Use the localized message
+            await client.send_message(callback_query.message.chat.id, await get_message(language, "game_ended"))
             await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
 
 @Client.on_message(filters.group & filters.command("set_mode", CMD))
