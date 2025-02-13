@@ -17,22 +17,22 @@ CMD = ["/", "."]
 @Client.on_message(filters.command("alive", CMD))
 async def alive_callback(client: Client, message: Message):
     user_id = str(message.from_user.id)
-    language = await db.get_user_language(user_id)  # Fetch the user's preferred language
+    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
     logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
-    await message.reply_text(await get_message(language, "alive"))  # Use the user's language
+    await message.reply_text(await get_message(language, "alive"))  # Use the group's language
 
 @Client.on_message(filters.command("ping", CMD))
 async def ping_callback(client: Client, message: Message):
     user_id = str(message.from_user.id)
-    language = await db.get_user_language(user_id)  # Fetch the user's preferred language
-    await message.reply_text(await get_message(language, "ping"))  # Use the user's language
+    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
+    await message.reply_text(await get_message(language, "ping"))  # Use the group's language
 
 @Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
 async def broadcast_pm_callback(client: Client, message: Message):
     if len(message.command) < 2:
         user_id = str(message.from_user.id)
-        language = await db.get_user_language(user_id)  # Fetch the user's preferred language
-        await message.reply_text(await get_message(language, "provide_message"))  # Use the user's language
+        language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
+        await message.reply_text(await get_message(language, "provide_message"))  # Use the group's language
         return
 
     broadcast_message = " ".join(message.command[1:])
@@ -54,17 +54,17 @@ async def broadcast_pm_callback(client: Client, message: Message):
     pending_count = total_users - (success_count + fail_count)
 
     user_id = str(message.from_user.id)
-    language = await db.get_user_language(user_id)  # Fetch the user's preferred language
+    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
     await message.reply_text(
-        await get_message(language, "broadcast_pm_success", total=total_users, success=success_count, failed=fail_count, pending=pending_count)  # Use the user's language
+        await get_message(language, "broadcast_pm_success", total=total_users, success=success_count, failed=fail_count, pending=pending_count)  # Use the group's language
     )
 
 @Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
 async def broadcast_group_callback(client: Client, message: Message):
     if len(message.command) < 2:
         user_id = str(message.from_user.id)
-        language = await db.get_user_language(user_id)  # Fetch the user's preferred language
-        await message.reply_text(await get_message(language, "provide_message"))  # Use the user's language
+        language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
+        await message.reply_text(await get_message(language, "provide_message"))  # Use the group's language
         return
 
     broadcast_message = " ".join(message.command[1:])
@@ -86,20 +86,20 @@ async def broadcast_group_callback(client: Client, message: Message):
     pending_count = total_groups - (success_count + fail_count)
 
     user_id = str(message.from_user.id)
-    language = await db.get_user_language(user_id)  # Fetch the user's preferred language
+    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
     await message.reply_text(
-        await get_message(language, "broadcast_group_success", total=total_groups, success=success_count, failed=fail_count, pending=pending_count)  # Use the user's language
+        await get_message(language, "broadcast_group_success", total=total_groups, success=success_count, failed=fail_count, pending=pending_count)  # Use the group's language
     )
 
 @Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
 async def stats_callback(client: Client, message: Message):
     user_id = str(message.from_user.id)
-    language = await db.get_user_language(user_id)  # Fetch the user's preferred language
+    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
 
     user_count = await db.get_user_count()  # Get total user count
     chat_count = await db.get_chat_count()  # Get total chat count
     game_count = await db.get_game_count()  # Get total game count
 
-    stats_message = await get_message(language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)  # Use the user's language
+    stats_message = await get_message(language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)  # Use the group's language
 
     await message.reply_text(stats_message)
