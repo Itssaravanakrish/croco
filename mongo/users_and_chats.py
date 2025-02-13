@@ -3,7 +3,6 @@ from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
-import pyrogram
 
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
@@ -61,6 +60,36 @@ class Database:
         if user is None:
             raise UserNotFoundError(f"User  with ID {user_id} not found.")
         return user
+
+    # Game management methods
+    async def set_game(self, chat_id: str, game_data: Dict[str, Any]) -> None:
+        """Set or update the game for a specific chat."""
+        await self.games_collection.update_one(
+            {"chat_id": chat_id},
+            {"$set": game_data},
+            upsert=True  # Create a new document if it doesn't exist
+        )
+        logging.info(f"Game for chat {chat_id} has been set/updated.")
+    
+    async def get_game(self, chat_id: str) -> Optional[Dict[str, Any]]:
+        """Get the ongoing game for a specific chat."""
+        game = await self.games_collection.find_one({"chat_id": chat_id})
+        if game is None:
+            return None  # No ongoing game found
+        return game
+
+    async def remove_game(self, chat_id: str) -> None:
+        """Remove the ongoing game for a specific chat."""
+        await self.games_collection.delete_one({"chat_id": chat_id})
+        logging.info(f"Game for chat {chat_id} has been removed.")
+
+    async def update_word(self, chat_id: str, new_word: str) -> None:
+        """Update the current word for a specific chat."""
+        await self.games_collection.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"word": new_word}}
+        )
+        logging.info(f"Word for chat {chat_id} has been updated to {new_word}.")
 
     # Chat management methods
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
