@@ -84,32 +84,32 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
 
     game = await db.get_game(callback_query.message.chat.id)
 
+    if not game:
+        await callback_query.answer(await get_message(language, "no_game_ongoing"), show_alert=True)
+        return
+
+    host_id = game['host']['id']  # Get the host ID
+
+    if user_id != host_id:
+        await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)
+        return
+
+    # If the user is the host, proceed with the action
     if callback_query.data == "view":
-        if game:
-            word = game['word']  # Retrieve the current word
-            await callback_query.message.reply_text(await get_message(language, "current_word", word=word))
-        else:
-            await callback_query.answer(await get_message(language, "no_game_ongoing"), show_alert=True)
+        word = game['word']  # Retrieve the current word
+        await callback_query.message.reply_text(await get_message(language, "current_word", word=word))
 
     elif callback_query.data == "next":
-        if game:
-            new_word = choice()  # Get a new word for the game
-            await db.update_word(callback_query.message.chat.id, new_word)  # Update the word in the database
-            await callback_query.message.reply_text(await get_message(language, "new_word", word=new_word))
-        else:
-            await callback_query.answer(await get_message(language, "no_game_ongoing"), show_alert=True)
+        new_word = choice(game['game_mode'])  # Get a new word for the game
+        await db.update_word(callback_query.message.chat.id, new_word)  # Update the word in the database
+        await callback_query.message.reply_text(await get_message(language, "new_word", word=new_word))
 
     elif callback_query.data == "end_game":
-        if game:
-            if callback_query.from_user.id == game['host']['id']:
-                await handle_end_game(client, callback_query.message)
-                await callback_query.message.delete()
-                await client.send_message(callback_query.message.chat.id, await get_message(language, "game_ended"))  # Use the localized message
-                await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
-            else:
-                await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)
-        else:
-            await callback_query.answer(await get_message(language, "no_game_ongoing"), show_alert=True)
+        if user_id == host_id:
+            await handle_end_game(client, callback_query.message)
+            await callback_query.message.delete()
+            await client.send_message(callback_query.message.chat.id, await get_message(language, "game_ended"))  # Use the localized message
+            await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
 
 @Client.on_message(filters.group & filters.command("set_mode", CMD))
 async def set_game_mode(client: Client, message: Message):
@@ -128,7 +128,7 @@ async def set_game_mode(client: Client, message: Message):
     await db.set_group_game_mode(message.chat.id, mode)  # Store the new game mode in the database
     await message.reply_text(await get_message(language, "game_mode_set", mode=mode))
 
-async def handle_end_game(client: Client, message: Message):
+async def handle_end_game(client: Client, message: Message, language: str):
     chat_id = message.chat.id
     await db.remove_game(chat_id)  # Ensure this method is defined in your Database class
     await message.reply_text(await get_message(language, "game_ended"))  # Notify that the game has ended
