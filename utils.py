@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Optional
 from mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError
+from script import messages_en, messages_ta, messages_hi
 
 # Configure logging
 logging.basicConfig(
@@ -8,23 +9,15 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+
 async def get_message(language: str, key: str) -> str:
     """Fetch localized message based on language."""
-    try:
-        if language == "en":
-            from script import messages_en
-            return getattr(messages_en, key, "Message not found")
-        elif language == "ta":
-            from script import messages_ta
-            return getattr(messages_ta, key, "Message not found")
-        elif language == "hi":
-            from script import messages_hi
-            return getattr(messages_hi, key, "Message not found")
-        else:
-            return "Invalid language"
-    except ImportError:
-        logging.error("Language module not found")
-        return "Message not found"
+    messages = {
+        "en": messages_en,
+        "ta": messages_ta,
+        "hi": messages_hi
+    }
+    return messages.get(language, {}).get(key, "Message not found")
 
 async def register_user(user_id: str, user_data: Dict) -> bool:
     """Register a user in the database."""
