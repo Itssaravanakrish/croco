@@ -4,7 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from words import choice
 from mongo.users_and_chats import db
-from utils import get_message  # Assuming get_message is defined in utils.py
+from utils import get_message, is_user_admin  # Assuming get_message and is_user_admin are defined in utils.py
 
 # Configure logging
 logging.basicConfig(
@@ -102,7 +102,7 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
     elif callback_query.data == "end_game":
         if game:
             if callback_query.from_user.id == game['host']['id']:
- await handle_end_game(client, callback_query.message)
+                await handle_end_game(client, callback_query.message)
                 await callback_query.message.delete()
                 await client.send_message(callback_query.message.chat.id, await get_message(language, "game_ended"))  # Use the localized message
                 await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
@@ -116,7 +116,7 @@ async def set_game_mode(client: Client, message: Message):
     user_id = str(message.from_user.id)
     language = await get_user_language(user_id)  # Use the existing function
 
-    if message.from_user.id != message.chat.owner.id:  # Check if the user is the admin or group owner
+    if not await is_user_admin(client, message.chat.id, user_id):  # Check if the user is an admin
         await message.reply_text(await get_message(language, "not_admin"))
         return
 
