@@ -23,7 +23,7 @@ async def start_group(client: Client, message: Message):
 
     # Register user
     if not await register_user(user_id, user_data):
-        await message.reply_text(get_message("error_registering_user"))
+        await message.reply_text(get_message("en", "error_registering_user"))  # Default to English
         return
 
     chat_id = str(message.chat.id)
@@ -34,14 +34,17 @@ async def start_group(client: Client, message: Message):
 
     # Register chat
     if not await register_chat(chat_id, chat_data):
-        await message.reply_text(get_message("error_registering_chat"))
+        await message.reply_text(get_message("en", "error_registering_chat"))  # Default to English
         return
 
+    # Determine the user's preferred language
+    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference
+    language = get_user_language(user_language)  # Ensure valid language
+
     await message.reply_text(
-        get_message("welcome"),
+        get_message(language, "welcome"),  # Use the user's preferred language
         reply_markup=inline_keyboard_markup_pm
     )
-
 @Client.on_message(filters.private & filters.command("start", CMD))
 async def start_private(client: Client, message: Message):
     user_id = str(message.from_user.id)
@@ -52,10 +55,14 @@ async def start_private(client: Client, message: Message):
 
     # Register user
     if not await register_user(user_id, user_data):
-        await message.reply_text(get_message("error_registering_user"))
+        await message.reply_text(get_message("en", "error_registering_user"))  # Default to English
         return
 
+    # Determine the user's preferred language
+    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference
+    language = get_user_language(user_language)  # Ensure valid language
+
     await message.reply_text(
-        get_message("welcome"),
+        get_message(language, "welcome"),  # Use the user's preferred language
         reply_markup=inline_keyboard_markup_pm
     )
