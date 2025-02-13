@@ -25,7 +25,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 )
 
 async def new_game(client: Client, message: Message, language="en", game_mode="easy") -> bool:
-    word = choice()  # Get a new word for the game
+    word = choice(game_mode)  # Pass the game_mode to the choice function
 
     # Get the bot's ID
     bot_info = await client.get_me()
