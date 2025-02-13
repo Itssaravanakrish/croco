@@ -69,7 +69,7 @@ async def start_private(client: Client, message: Message):
         return
 
     # Determine the user's preferred language
-    user_language = await db.get_user_language(user_id)  # Fetch the user's language preference
+    user_language = await db.get_group_language(message.chat.id)  # Fetch the group's language preference
     language = user_language if user_language else "en"  # Default to English if not set
 
     await message.reply_text(
