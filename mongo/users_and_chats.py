@@ -158,3 +158,6 @@ class Database:
     async def get_group_game_mode(self, chat_id: str) -> str:
         chat = await self.get_chat(chat_id)
         return chat.get("game_mode", "easy")
+
+# Create a database instance
+db = Database(MONGO_URI, MONGO_DB_NAME)
