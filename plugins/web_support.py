@@ -1,17 +1,31 @@
-# Don't Remove Credit @VJ_Botz
-# Subscribe YouTube Channel For Amazing Bot @Tech_VJ
-# Ask Doubt on telegram @KingVJ01
-
 from aiohttp import web
+from flask import Flask, request
+import os
+from bot import bot  # Import your bot instance
 
-routes = web.RouteTableDef()
+app = Flask(__name__)  # Flask app instance
 
-@routes.get("/", allow_head=True)
-async def root_route_handler(request):
-    return web.json_response("LazyDeveloper")
+@app.route("/", methods=["GET"])
+def hello_world():
+    return "TamilBots"
 
+@app.route("/your_webhook_path", methods=["POST"])  # Replace with your actual path
+async def webhook_handler():
+    update = request.get_json()
+    if update:
+        await bot.process_new_updates(update)
+    return "ok"
 
 async def web_server():
-    web_app = web.Application(client_max_size=30000000)
-    web_app.add_routes(routes)
-    return web_app
+    aio_app = web.Application()  # aiohttp app
+    aio_app.router.add_post("/your_webhook_path", webhook_adapter)  # Add Flask route to aiohttp
+    aio_app.router.add_get("/", hello_adapter)
+    return aio_app
+
+def webhook_adapter(request): #Adapter for Flask webhook
+    with app.test_request_context(environ=request.environ):
+        return webhook_handler()
+
+def hello_adapter(request): #Adapter for Flask hello world
+    with app.test_request_context(environ=request.environ):
+        return hello_world()
