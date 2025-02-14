@@ -1,7 +1,7 @@
 from time import time
 import logging
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Sticker
 from words import choice
 from mongo.users_and_chats import db
 from utils import get_message, is_user_admin
