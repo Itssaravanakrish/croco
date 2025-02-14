@@ -1,9 +1,8 @@
 from aiohttp import web
 from flask import Flask, request
-import os
 from bot import bot  # Import your bot instance
 
-app = Flask(__name__)  # Flask app instance
+app = Flask(__name__)
 
 @app.route("/", methods=["GET"])
 def hello_world():
@@ -17,15 +16,15 @@ async def webhook_handler():
     return "ok"
 
 async def web_server():
-    aio_app = web.Application()  # aiohttp app
-    aio_app.router.add_post("/your_webhook_path", webhook_adapter)  # Add Flask route to aiohttp
+    aio_app = web.Application()
+    aio_app.router.add_post("/your_webhook_path", webhook_adapter)
     aio_app.router.add_get("/", hello_adapter)
     return aio_app
 
-def webhook_adapter(request): #Adapter for Flask webhook
+def webhook_adapter(request):
     with app.test_request_context(environ=request.environ):
         return webhook_handler()
 
-def hello_adapter(request): #Adapter for Flask hello world
+def hello_adapter(request):
     with app.test_request_context(environ=request.environ):
         return hello_world()
