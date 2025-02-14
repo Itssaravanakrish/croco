@@ -1,4 +1,4 @@
-from pyrogram import Client, filters, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import Client, filters, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from mongo.users_and_chats import db
 from utils import get_message, register_user, register_chat, is_user_admin
 import logging
