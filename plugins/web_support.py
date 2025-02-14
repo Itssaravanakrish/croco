@@ -1,6 +1,6 @@
 from aiohttp import web
 from flask import Flask, request  # Import request from Flask
-from bot import bot  # Import your bot instance
+from main import bot  # Import your bot instance
 from app import app  # Import app from app.py
 
 
