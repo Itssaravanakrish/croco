@@ -1,7 +1,8 @@
+# utils.py
 import logging
 from typing import Dict, Optional
 from mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError
-from script import messages_en, messages_ta, messages_hi
+from script import messages_en, messages_ta, messages_hi  # Assuming this is where your messages are stored
 from pyrogram import Client
 
 # Configure logging
@@ -10,64 +11,58 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-async def get_message(language: str, key: str, **kwargs) -> str:
+async def get_message(language: str, key: str, **kwargs) -> Optional[str]:
     """Fetch localized message based on language."""
     messages = {
         "en": messages_en,
         "ta": messages_ta,
         "hi": messages_hi
     }
-    
-    # Get the message template
-    message_template = messages.get(language, {}).get(key, "Message not found")
-    
-    # Format the message with any additional keyword arguments
+
+    message_template = messages.get(language, {}).get(key)
+
+    if message_template is None:
+        logging.warning(f"Message key '{key}' not found for language '{language}'.")
+        return "Message not found"
     return message_template.format(**kwargs)
 
-async def register_user(user_id: str, user_data: Dict) -> bool:
-    """Register a user in the database."""
+async def register_item(item_type: str, item_id: str, item_data: Dict) -> bool:
+    """Register a user or chat in the database."""
+    collection = db.users_collection if item_type == "user" else db.chats_collection
     try:
-        await db.get_user(user_id)
-        logging.info(f"User  {user_id} already exists.")
-        return True
-    except UserNotFoundError:
-        try:
-            await db.add_user(user_id, user_data)
-            logging.info(f"User  {user_id} registered.")
+        existing_item = await collection.find_one({f"{item_type}_id": item_id})
+        if existing_item:
+            logging.info(f"{item_type.capitalize()} {item_id} already exists.")
             return True
-        except Exception as e:
-            logging.error(f"Failed to register user {user_id}: {e}")
-            return False
+        else:
+            await collection.insert_one({f"{item_type}_id": item_id, **item_data})
+            logging.info(f"{item_type.capitalize()} {item_id} registered.")
+            return True
+    except Exception as e:
+        logging.error(f"Failed to register {item_type} {item_id}: {e}")
+        return False
+
+async def register_user(user_id: str, user_data: Dict) -> bool:
+    return await register_item("user", user_id, user_data)
 
 async def register_chat(chat_id: str, chat_data: Dict) -> bool:
-    """Register a chat in the database."""
-    try:
-        await db.get_chat(chat_id)
-        logging.info(f"Chat {chat_id} already exists.")
-        return True
-    except ChatNotFoundError:
-        try:
-            await db.add_chat(chat_id, chat_data)
-            logging.info(f"Chat {chat_id} registered.")
-            return True
-        except Exception as e:
-            logging.error(f"Failed to register chat {chat_id}: {e}")
-            return False
+    return await register_item("chat", chat_id, chat_data)
 
 async def is_user_admin(client: Client, chat_id: str, user_id: str) -> bool:
     """Check if a user is an admin in a specific chat."""
     try:
         chat_member = await client.get_chat_member(chat_id, user_id)
+        if chat_member.status == "kicked" or chat_member.status == "left" or chat_member.status == "restricted":  # Handle user not found
+            return False
         return chat_member.status in ["administrator", "creator"]
     except Exception as e:
         logging.error(f"Failed to check if user {user_id} is admin in chat {chat_id}: {e}")
         return False
 
-# Optional: Add utility functions for group language and game mode if needed
 async def set_group_language(chat_id: str, language: str) -> bool:
     """Set the group language in the database."""
     try:
-        await db.set_group_language(chat_id, language)
+        await db.set_chat_language(chat_id, language)  # Use the correct function from db
         logging.info(f"Group language for chat {chat_id} set to {language}.")
         return True
     except Exception as e:
@@ -77,7 +72,7 @@ async def set_group_language(chat_id: str, language: str) -> bool:
 async def get_group_language(chat_id: str) -> str:
     """Get the group language from the database."""
     try:
-        language = await db.get_group_language(chat_id)
+        language = await db.get_chat_language(chat_id)  # Use the correct function from db
         logging.info(f"Retrieved group language for chat {chat_id}: {language}.")
         return language
     except Exception as e:
