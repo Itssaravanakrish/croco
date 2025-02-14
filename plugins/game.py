@@ -2,9 +2,9 @@ from time import time
 import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from words import choice
-from mongo.users_and_chats import db
-from utils import get_message, is_user_admin 
+from words import choice  # Assuming this module exists
+from mongo.users_and_chats import db  # Assuming this module contains your database functions
+from utils import get_message, is_user_admin  # Assuming this module exists
 
 # Configure logging
 logging.basicConfig(
@@ -25,27 +25,29 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 )
 
 async def new_game(client: Client, message: Message, language="en", game_mode="easy") -> bool:
-    word = choice(game_mode)  # Pass the game_mode to the choice function
+    word = choice(game_mode)
 
-    # Get the bot's ID
     bot_info = await client.get_me()
     bot_id = bot_info.id
 
-    # Ensure the host is not the bot
     host_id = message.from_user.id
     if host_id == bot_id:
-        return False  # Prevent the bot from being set as the host
+        return False
 
-    await db.set_game(message.chat.id, {
-        'start': time(),
-        'host': {
-            'id': host_id,
-            'first_name': message.from_user.first_name,
-            'username': message.from_user.username,
-        },
-        'word': word,
-        'game_mode': game_mode  # Store the game mode
-    })
+    try:
+        await db.set_game(message.chat.id, {
+            'start': time(),
+            'host': {
+                'id': host_id,
+                'first_name': message.from_user.first_name,
+                'username': message.from_user.username,
+            },
+            'word': word,
+            'game_mode': game_mode
+        })
+    except Exception as e:
+        logging.error(f"Error setting game in database: {e}")
+        return False  # Indicate game creation failure
 
     await message.reply_text(
         await get_message(language, "game_started", name=message.from_user.first_name),
@@ -55,17 +57,22 @@ async def new_game(client: Client, message: Message, language="en", game_mode="e
 
 @Client.on_message(filters.group & filters.command("game", CMD))
 async def game_command(client: Client, message: Message):
-    chat_id = str(message.chat.id)
-    ongoing_game = await db.get_game(chat_id)
+    chat_id = message.chat.id # No need to convert to str
+    try:
+        ongoing_game = await db.get_game(chat_id)
+    except Exception as e:
+        logging.error(f"Error getting game from database: {e}")
+        await message.reply_text(await get_message(await db.get_group_language(chat_id), "database_error"))
+        return
 
-    user_id = str(message.from_user.id)
-    language = await db.get_group_language(chat_id)  # Use group language
-    game_mode = await db.get_group_game_mode(chat_id)  # Fetch the group's game mode from the database
+    user_id = message.from_user.id # No need to convert to str
+    language = await db.get_group_language(chat_id)
+    game_mode = await db.get_group_game_mode(chat_id)
 
     if ongoing_game:
         if (time() - ongoing_game['start']) >= GAME_TIMEOUT:
-            await handle_end_game(client, message)
-            await new_game(client, message, language, game_mode)  # Pass game_mode to new_game
+            await handle_end_game(client, message, language) # Pass language here
+            await new_game(client, message, language, game_mode)
             return
 
         host_id = ongoing_game["host"]["id"]
@@ -73,36 +80,54 @@ async def game_command(client: Client, message: Message):
             await message.reply_text(await get_message(language, "game_already_started"))
             return
 
-    await new_game(client, message, language, game_mode)  # Pass game_mode to new_game
+    await new_game(client, message, language, game_mode)
 
 @Client.on_callback_query(filters.regex("view|next|end_game"))
 async def game_action_callback(client: Client, callback_query: CallbackQuery):
-    await callback_query.answer()  # Acknowledge the callback query
+    await callback_query.answer()
 
-    user_id = str(callback_query.from_user.id)
-    language = await db.get_group_language(callback_query.message.chat.id)  # Use group language
+    user_id = callback_query.from_user.id # No need to convert to str
+    language = await db.get_group_language(callback_query.message.chat.id)
 
-    game = await db.get_game(callback_query.message.chat.id)
-
-    if not game:
-        await callback_query.answer(await get_message(language, "no_game_ongoing"), show_alert=True)
+    try:
+        game = await db.get_game(callback_query.message.chat.id)
+    except Exception as e:
+        logging.error(f"Error getting game from database: {e}")
+        await callback_query.answer(await get_message(language, "database_error"), show_alert=True)
         return
 
-    host_id = game['host']['id']  # Get the host ID
+    if not game:
+        await callback_query.message.edit_text(await get_message(language, "no_game_ongoing"))
+        return
+
+    host_id = game['host']['id']
 
     if user_id != host_id:
         await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)
         return
 
-    # If the user is the host, proceed with the action
+    if (time() - game['start']) >= GAME_TIMEOUT: # Check for timeout
+        await handle_end_game(client, callback_query.message, language)
+        await callback_query.message.edit_text(await get_message(language, "game_timed_out"))
+        return
+
     if callback_query.data == "view":
-        word = game['word']  # Retrieve the current word
-        await callback_query.message.reply_text(await get_message(language, "current_word", word=word))
+        word = game['word']
+        await callback_query.message.edit_text(await get_message(language, "current_word", word=word), reply_markup=inline_keyboard_markup)
 
     elif callback_query.data == "next":
-        new_word = choice(game['game_mode'])  # Get a new word for the game
-        await db.update_word(callback_query.message.chat.id, new_word)  # Update the word in the database
-        await callback_query.message.reply_text(await get_message(language, "new_word", word=new_word))
+        try:
+            new_word = choice(game['game_mode'])
+            result = await db.update_game(callback_query.message.chat.id, {"$set": {"word": new_word}}) # Atomic update
+            if result.modified_count == 1:
+                await callback_query.message.edit_text(await get_message(language, "new_word", word=new_word), reply_markup=inline_keyboard_markup)
+            else:
+                logging.error(f"Failed to update word (modified_count: {result.modified_count}) for chat {callback_query.message.chat.id}")
+                await callback_query.answer(await get_message(language, "word_not_updated"), show_alert=True)
+        except Exception as e:
+            logging.error(f"Error updating word in database: {e}")
+            await callback_query.answer(await get_message(language, "database_error"), show_alert=True)
+            return
 
     elif callback_query.data == "end_game":
         if user_id == host_id:
@@ -113,10 +138,10 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
 
 @Client.on_message(filters.group & filters.command("set_mode", CMD))
 async def set_game_mode(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    language = await db.get_group_language(message.chat.id)  # Use group language
+    user_id = message.from_user.id # No need to convert to str
+    language = await db.get_group_language(message.chat.id)
 
-    if not await is_user_admin(client, message.chat.id, user_id):  # Check if the user is an admin
+    if not await is_user_admin(client, message.chat.id, user_id):
         await message.reply_text(await get_message(language, "not_admin"))
         return
 
@@ -125,11 +150,19 @@ async def set_game_mode(client: Client, message: Message):
         await message.reply_text(await get_message(language, "invalid_mode"))
         return
 
-    await db.set_group_game_mode(message.chat.id, mode)  # Store the new game mode in the database
-    await message.reply_text(await get_message(language, "game_mode_set", mode=mode))
+    try:
+        await db.set_group_game_mode(message.chat.id, mode)
+        await message.reply_text(await get_message(language, "game_mode_set", mode=mode))
+    except Exception as e:
+        logging.error(f"Error setting game mode in database: {e}")
+        await message.reply_text(await get_message(language, "database_error"))
+        return
 
 async def handle_end_game(client: Client, message: Message, language: str):
-    chat_id = message.chat.id
-    await db.remove_game(chat_id)  # Ensure this method is defined in your Database class
-    await message.reply_text(await get_message(language, "game_ended"))  # Notify that the game has ended
-    return True
+    try:
+        await db.remove_game(message.chat.id)
+        await message.reply_text(await get_message(language, "game_ended"))
+    except Exception as e:
+        logging.error(f"Error removing game from database: {e}")
+        await message.reply_text(await get_message(language, "database_error"))
+        return
