@@ -6,3 +6,5 @@ aiohttp>=3.8.0
 python-telegram-bot>=20.0a1
 schedule>=1.1.0
 TgCrypto
+flask
+uvicorn
