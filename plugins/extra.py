@@ -1,7 +1,7 @@
 # extra.py
 import logging
 import asyncio
-from pyrogram.types import Client, filters
+from pyrogram import Client, filters
 from pyrogram.types import Message
 from mongo.users_and_chats import db
 from config import SUDO_USERS
