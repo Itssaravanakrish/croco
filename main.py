@@ -1,3 +1,4 @@
+#main.py
 import logging
 import logging.config
 from pyrogram import Client
