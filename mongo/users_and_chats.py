@@ -1,6 +1,6 @@
 # mongo/users_and_chats.py
 import logging
-from typing import Dict, Any, Optional, Any
+from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME  # Ensure this file exists with your MongoDB URI
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
@@ -24,19 +24,25 @@ class Database:
         self.users_collection: AsyncIOMotorCollection = self.database.users
         self.chats_collection: AsyncIOMotorCollection = self.database.chats
         self.games_collection: AsyncIOMotorCollection = self.database.games
-        logging.info(f"Connected to MongoDB at {uri}, database: {database_name}")
+        logging.info(f"Connected to MongoDB (but not yet connected) at {uri}, database: {database_name}") #Notify connection is not yet established.
 
     async def connect(self):
-        if self.client is None:
-            raise DatabaseConnectionError("Database connection is not established.")
+        try:
+            await self.client.admin.command('ping')  # Try to ping the server
+            logging.info(f"Successfully connected to MongoDB at {MONGO_URI}, database: {MONGO_DB_NAME}")
+        except (ServerSelectionTimeoutError, ConfigurationError) as e:
+            raise DatabaseConnectionError(f"Failed to connect to MongoDB: {e}")
 
     async def close(self) -> None:
         self.client.close()
         logging.info("Database connection closed.")
 
-    async def handle_db_error(self, action: str, identifier: str, e: Exception):
-        logging.error(f"Failed to {action} for {identifier}: {e}")
-        raise DatabaseConnectionError(f"Failed to {action} for {identifier}: {e}")
+    async def handle_db_error(self, action: str, identifier: str, e: Exception, query: Optional[Dict] = None):
+        log_message = f"Failed to {action} for {identifier}: {e}"
+        if query:
+            log_message += f" (Query: {query})"
+        logging.error(log_message)
+        raise DatabaseConnectionError(log_message)
 
     # User management methods
     async def add_user(self, user_id: str, user_data: Dict[str, Any]) -> None:
@@ -75,8 +81,8 @@ class Database:
             game = await self.games_collection.find_one({"chat_id": chat_id})
             return game
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            await self.handle_db_error("get game", chat_id, e)
-
+            logging.error(f"Failed to get game for {chat_id}: {e}")  # Log the error
+            return None  # Return None on error
 
     async def remove_game(self, chat_id: str) -> None:
         try:
@@ -126,9 +132,8 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("update chat", chat_id, e)
 
-
     # Group language management methods
-    async def set_group_language(self, chat_id: str, language: str) -> None:
+    async def set_chat_language(self, chat_id: str, language: str) -> None:  # Correct Name
         try:
             await self.chats_collection.update_one(
                 {"chat_id": chat_id},
@@ -139,7 +144,7 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("set language", chat_id, e)
 
-    async def get_group_language(self, chat_id: str) -> str:
+    async def get_chat_language(self, chat_id: str) -> str:  # Correct Name
         chat = await self.get_chat(chat_id)
         return chat.get("language", "en")
 
@@ -159,5 +164,5 @@ class Database:
         chat = await self.get_chat(chat_id)
         return chat.get("game_mode", "easy")
 
-# Create a database instance
+# Create a database instance (but don't connect yet)
 db = Database(MONGO_URI, MONGO_DB_NAME)
