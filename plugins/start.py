@@ -198,4 +198,18 @@ async def change_game_mode_callback(client: Client, callback_query: CallbackQuer
 
 async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
     new_game_mode = callback_query.data.split("_")[-1]
-    chat_id = callback_query.message.chat.
+    chat_id = callback_query.message.chat.id
+
+    try:
+        await db.set_group_game_mode(chat_id, new_game_mode)  # Only set for groups
+
+        await callback_query.message.edit_text(
+            await get_message("en", "game_mode_set").format(mode=new_game_mode.capitalize()),
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("Back 🔙", callback_data="back_settings")],
+                ]
+            ),
+        )
+    except Exception as e:
+        logging.error(f"Error setting game mode: {e}")
