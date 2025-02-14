@@ -1,12 +1,11 @@
-#extra.py
-
+# extra.py
 import logging
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from mongo.users_and_chats import db  # Import the database instance
+from mongo.users_and_chats import db
 from config import SUDO_USERS
-from utils import get_message  # Import get_message from utils
+from utils import get_message
 
 # Configure logging
 logging.basicConfig(
@@ -18,90 +17,127 @@ CMD = ["/", "."]
 
 @Client.on_message(filters.command("alive", CMD))
 async def alive_callback(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
+    language = await db.get_chat_language(message.chat.id)
     logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
-    await message.reply_text(await get_message(language, "alive"))  # Use the group's language
+    await message.reply_text(await get_message(language, "alive"))
 
 @Client.on_message(filters.command("ping", CMD))
 async def ping_callback(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
-    await message.reply_text(await get_message(language, "ping"))  # Use the group's language
+    language = await db.get_chat_language(message.chat.id)
+    await message.reply_text(await get_message(language, "ping"))
 
 @Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
 async def broadcast_pm_callback(client: Client, message: Message):
     if len(message.command) < 2:
-        user_id = str(message.from_user.id)
-        language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
-        await message.reply_text(await get_message(language, "provide_message"))  # Use the group's language
+        language = await db.get_chat_language(message.chat.id)
+        await message.reply_text(await get_message(language, "provide_message"))
         return
 
     broadcast_message = " ".join(message.command[1:])
-    user_ids = await db.get_all_user_ids()  # Fetch user IDs from the database
+    user_ids = await db.get_all_user_ids()
 
     total_users = len(user_ids)
     success_count = 0
     fail_count = 0
+    error_messages = []  # Store error messages
 
     for user_id in user_ids:
         try:
             await client.send_message(user_id, broadcast_message)
             success_count += 1
-            await asyncio.sleep(0.1)  # Adding delay to prevent hitting rate limits
+            await asyncio.sleep(0.1)  # Rate limiting
         except Exception as e:
             logging.error(f"Failed to send message to user {user_id}: {e}")
             fail_count += 1
+            error_messages.append(f"Failed to send to {user_id}: {e}")  # Add error details
 
     pending_count = total_users - (success_count + fail_count)
 
-    user_id = str(message.from_user.id)
-    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
-    await message.reply_text(
-        await get_message(language, "broadcast_pm_success", total=total_users, success=success_count, failed=fail_count, pending=pending_count)  # Use the group's language
+    language = await db.get_chat_language(message.chat.id)
+    summary_message = await get_message(
+        language,
+        "broadcast_pm_success",
+        total=total_users,
+        success=success_count,
+        failed=fail_count,
+        pending=pending_count,
     )
+
+    if error_messages:
+        summary_message += "\n\nErrors:\n" + "\n".join(error_messages)  # Include error details
+
+    await message.reply_text(summary_message)
+
+
 
 @Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
 async def broadcast_group_callback(client: Client, message: Message):
     if len(message.command) < 2:
-        user_id = str(message.from_user.id)
-        language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
-        await message.reply_text(await get_message(language, "provide_message"))  # Use the group's language
+        language = await db.get_chat_language(message.chat.id)
+        await message.reply_text(await get_message(language, "provide_message"))
         return
 
     broadcast_message = " ".join(message.command[1:])
-    group_ids = await db.get_all_group_ids()  # Fetch group IDs from the database
+    group_ids = await db.get_all_group_ids()
 
     total_groups = len(group_ids)
     success_count = 0
     fail_count = 0
+    error_messages = []
 
     for group_id in group_ids:
         try:
             await client.send_message(group_id, broadcast_message)
             success_count += 1
-            await asyncio.sleep(0.1)  # Adding delay to prevent hitting rate limits
+            await asyncio.sleep(0.1)  # Rate limiting
         except Exception as e:
             logging.error(f"Failed to send message to group {group_id}: {e}")
             fail_count += 1
+            error_messages.append(f"Failed to send to {group_id}: {e}")
 
     pending_count = total_groups - (success_count + fail_count)
 
-    user_id = str(message.from_user.id)
-    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
-    await message.reply_text(
-        await get_message(language, "broadcast_group_success", total=total_groups, success=success_count, failed=fail_count, pending=pending_count)  # Use the group's language
+    language = await db.get_chat_language(message.chat.id)
+    summary_message = await get_message(
+        language,
+        "broadcast_group_success",
+        total=total_groups,
+        success=success_count,
+        failed=fail_count,
+        pending=pending_count,
     )
+
+    if error_messages:
+        summary_message += "\n\nErrors:\n" + "\n".join(error_messages)
+
+    await message.reply_text(summary_message)
+
+
 
 @Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
 async def stats_callback(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    language = await db.get_group_language(message.chat.id)  # Fetch the group's preferred language
+    language = await db.get_chat_language(message.chat.id)
 
-    user_count = await db.get_user_count()  # Get total user count
-    chat_count = await db.get_chat_count()  # Get total chat count
-    game_count = await db.get_game_count()  # Get total game count
+    try:  # Add try-except blocks
+        user_count = await db.get_user_count()
+    except Exception as e:
+        logging.error(f"Error getting user count: {e}")
+        user_count = "Error"  # Or some default value
 
-    stats_message = await get_message(language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)  # Use the group's language
+    try:
+        chat_count = await db.get_chat_count()
+    except Exception as e:
+        logging.error(f"Error getting chat count: {e}")
+        chat_count = "Error"
+
+    try:
+        game_count = await db.get_game_count()
+    except Exception as e:
+        logging.error(f"Error getting game count: {e}")
+        game_count = "Error"
+
+    stats_message = await get_message(
+        language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count
+    )
 
     await message.reply_text(stats_message)
