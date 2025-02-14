@@ -1,4 +1,3 @@
-#main.py
 import logging
 import logging.config
 from pyrogram import Client
@@ -79,4 +78,3 @@ bot = Bot()
 # The corrected way to run the bot:
 loop = asyncio.get_event_loop()
 loop.create_task(bot.start())
-# No app.run() here. It's handled by aiohttp now (via the adapters)
