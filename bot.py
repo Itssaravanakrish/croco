@@ -6,7 +6,8 @@ import os
 from mongo.users_and_chats import Database
 from aiohttp import web
 import asyncio
-from plugins.web_support import web_server  # Import the web server function
+from app import app  # Import app from app.py
+from plugins.web_support import web_server  # Import web_server
 
 # Configure logging with error handling
 try:
@@ -53,7 +54,7 @@ class Bot(Client):
             chat = await self.database.get_chat("456")
             logging.info(f"Retrieved chat: {chat}")
 
-            web_app = await web_server()  # Get the aiohttp web app
+            web_app = await web_server()  # Get the aiohttp web app (which serves the Flask app)
             app_runner = web.AppRunner(web_app)
             await app_runner.setup()
             bind_address = "0.0.0.0"
@@ -77,4 +78,4 @@ bot = Bot()
 # The corrected way to run the bot:
 loop = asyncio.get_event_loop()
 loop.create_task(bot.start())
-# No app.run() here. It's handled by aiohttp now
+# No app.run() here. It's handled by aiohttp now (via the adapters)
