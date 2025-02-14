@@ -7,7 +7,7 @@ def hello_world():
     return "TamilBots"
 
 # Import bot AFTER the app is created
-from bot import bot  # Import bot after app
+from main import bot  # Import bot after app
 
 @app.route("/your_webhook_path", methods=["POST"])  # Your webhook route
 async def webhook_handler():
