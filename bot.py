@@ -1,10 +1,10 @@
 import logging
 import logging.config
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT  # Updated import for config
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME  # Import MONGO_URI and MONGO_DB_NAME
 from aiohttp import web
 from plugins.web_support import web_server
-from mongo import MongoDB  # Import the MongoDB class
+from mongo.users_and_chats import Database  # Import the Database class
 
 # Configure logging with error handling
 try:
@@ -28,18 +28,29 @@ class Bot(Client):
             plugins={"root": "plugins"},
             sleep_threshold=5,
         )
-        try:
-            self.mongo_db = MongoDB()  # Initialize MongoDB connection
-        except Exception as e:
-            logging.error(f"Failed to initialize MongoDB: {e}")
-            exit(1)  # Exit if MongoDB initialization fails
+        self.database = Database(MONGO_URI, MONGO_DB_NAME)  # Pass the URI and database name
 
     async def start(self):
         try:
+            await self.database.connect()  # Ensure MongoDB connection is established
             await super().start()  # Start the bot
             me = await self.get_me()  # Get bot information
             self.mention = me.mention  # Store mention format
             self.username = me.username  # Store username
+
+            # Example usage of Database
+            await self.database.add_user("123", {"name": "John Doe"})
+            logging.info("User  added successfully: 123")
+
+            user = await self.database.get_user("123")
+            logging.info(f"Retrieved user: {user}")
+
+            await self.database.add_chat("456", {"title": "General Chat"})
+            logging.info("Chat added successfully: 456")
+
+            chat = await self.database.get_chat("456")
+            logging.info(f"Retrieved chat: {chat}")
+
             app = web.AppRunner(await web_server())  # Initialize the web server
             await app.setup()  # Set up the web server
             bind_address = "0.0.0.0"  # Bind to all interfaces
@@ -51,6 +62,7 @@ class Bot(Client):
 
     async def stop(self, *args):
         try:
+            await self.database.close()  # Close the MongoDB connection
             await super().stop()  # Stop the bot
             logging.info("Bot Stopped 🙄")
         except Exception as e:
