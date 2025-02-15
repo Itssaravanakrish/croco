@@ -2,7 +2,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from pyrogram import Client, filters
 from mongo.users_and_chats import db
 from utils import get_message, register_user, register_chat, is_user_admin
-from script import Language # Import Language enum
+from script import Language  # Import Language enum
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -31,19 +31,27 @@ async def start_group(client: Client, message: Message):
         "username": message.from_user.username,
     }
 
-    if not await register_user(user_id, user_data):
-        await message.reply_text(await get_message("en", "error_registering_user"))
-        return
-
     chat_id = str(message.chat.id)
     chat_data = {"title": message.chat.title, "type": message.chat.type.name}
 
-    if not await register_chat(chat_id, chat_data):
-        await message.reply_text(await get_message("en", "error_registering_chat"))
-        return
+    group_language_str = await db.get_chat_language(message.chat.id)
+    try:
+        group_language = Language(group_language_str)
+    except ValueError:
+        group_language = Language.EN
 
-    group_language = await db.get_chat_language(message.chat.id)
-    language = group_language if group_language else "en"
+    try:  # Wrap registration in try...except
+        if not await register_user(user_id, user_data):
+            await message.reply_text(await get_message(group_language, "error_registering_user"))
+            return
+
+        if not await register_chat(chat_id, chat_data):
+            await message.reply_text(await get_message(group_language, "error_registering_chat"))
+            return
+    except Exception as e:  # Handle registration errors
+        logging.error(f"Error during registration: {e}")
+        await message.reply_text(await get_message(group_language, "error_during_registration"))  # Generic error message
+        return
 
     inline_keyboard_markup_grp = InlineKeyboardMarkup(
         [
@@ -62,7 +70,7 @@ async def start_group(client: Client, message: Message):
         ]
     )
 
-    welcome_message = await get_message(language, "welcome")
+    welcome_message = await get_message(group_language, "welcome")  # Pass the enum!
     if not welcome_message:
         logging.error("The welcome message is empty.")
         return
@@ -79,14 +87,13 @@ async def start_private(client: Client, message: Message):
     }
 
     if not await register_user(user_id, user_data):
-        await message.reply_text(await get_message("en", "error_registering_user"))
+        await message.reply_text(await get_message(Language.EN, "error_registering_user"))  # English fallback
         return
 
-    language = "en"  # Default language for private chats
+    language = Language.EN  # Default language for private chats (as enum)
 
-    await message.reply_text(
-        await get_message(language, "welcome"), reply_markup=inline_keyboard_markup_pm
-    )
+    welcome_message = await get_message(language, "welcome")  # Pass the enum!
+    await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
 
 @Client.on_callback_query()
@@ -122,15 +129,20 @@ async def button_callback(client: Client, callback_query: CallbackQuery):
 
 
 async def settings_callback(client: Client, callback_query: CallbackQuery):
-    if not await is_user_admin(
-        client, callback_query.message.chat.id, callback_query.from_user.id
-    ):
-        await callback_query.answer(await get_message("en", "not_admin"), show_alert=True)
+    if not await is_user_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
+        await callback_query.answer(await get_message(Language.EN, "not_admin"), show_alert=True)  # English fallback
         return
+
+    chat_id = callback_query.message.chat.id
+    language_str = await db.get_chat_language(chat_id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
 
     try:
         await callback_query.message.edit_text(
-            await get_message("en", "settings_option"),
+            await get_message(language, "settings_option"),
             reply_markup=InlineKeyboardMarkup(
                 [
                     [InlineKeyboardButton("Change Language 🌐", callback_data="change_language")],
@@ -141,13 +153,20 @@ async def settings_callback(client: Client, callback_query: CallbackQuery):
         )
     except Exception as e:
         logging.error(f"Error editing message: {e}")
-        # Handle the error, maybe send a message to the user
+        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True) # English fallback
 
 
 async def change_language_callback(client: Client, callback_query: CallbackQuery):
+    chat_id = callback_query.message.chat.id
+    language_str = await db.get_chat_language(chat_id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
+
     try:
         await callback_query.message.edit_text(
-            await get_message("en", "select_language"),
+            await get_message(language, "select_language"),
             reply_markup=InlineKeyboardMarkup(
                 [
                     [InlineKeyboardButton("English 🇬🇧", callback_data="set_language_en")],
@@ -159,17 +178,29 @@ async def change_language_callback(client: Client, callback_query: CallbackQuery
         )
     except Exception as e:
         logging.error(f"Error editing message: {e}")
+        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True) # English fallback
 
 
 async def set_language_callback(client: Client, callback_query: CallbackQuery):
-    new_language = callback_query.data.split("_")[-1]
+    new_language_str = callback_query.data.split("_")[-1]  # Get language as string
+    try:
+        new_language = Language(new_language_str)  # Convert to enum
+    except ValueError:
+        new_language = Language.EN  # Default to English
+        new_language_str = "en"  # Also set the string to "en" for consistency
+
     chat_id = callback_query.message.chat.id
 
     try:
-        await db.set_chat_language(chat_id, new_language)  # Only set for groups
+        await db.set_chat_language(chat_id, new_language_str)  # Store language as string in DB
+
+        # Get the correct "language_set" message based on the *new* language:
+        language_set_message = await get_message(new_language, "language_set")
+        if language_set_message is None:  # Check if message exists for the language
+            language_set_message = await get_message(Language.EN, "language_set") # fallback to english
 
         await callback_query.message.edit_text(
-            await get_message("en", "language_set").format(language=new_language.upper()),
+            language_set_message.format(language=new_language_str.upper()),  # Format with string
             reply_markup=InlineKeyboardMarkup(
                 [
                     [InlineKeyboardButton("Back 🔙", callback_data="back_settings")],
@@ -178,13 +209,20 @@ async def set_language_callback(client: Client, callback_query: CallbackQuery):
         )
     except Exception as e:
         logging.error(f"Error setting language: {e}")
-        # Handle the error
-
+        await callback_query.answer(await get_message(Language.EN, "error_setting_language"), show_alert=True) # Alert in english
+        # Handle the error, maybe send a message to the user
 
 async def change_game_mode_callback(client: Client, callback_query: CallbackQuery):
+    chat_id = callback_query.message.chat.id
+    language_str = await db.get_chat_language(chat_id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
+
     try:
         await callback_query.message.edit_text(
-            await get_message("en", "select_game_mode"),
+            await get_message(language, "select_game_mode"),  # Use correct language
             reply_markup=InlineKeyboardMarkup(
                 [
                     [InlineKeyboardButton("Easy 😌", callback_data="set_game_mode_easy")],
@@ -196,17 +234,27 @@ async def change_game_mode_callback(client: Client, callback_query: CallbackQuer
         )
     except Exception as e:
         logging.error(f"Error editing message: {e}")
+        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True) # English fallback
 
 
 async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
     new_game_mode = callback_query.data.split("_")[-1]
     chat_id = callback_query.message.chat.id
+    language_str = await db.get_chat_language(chat_id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
 
     try:
-        await db.set_group_game_mode(chat_id, new_game_mode)  # Only set for groups
+        await db.set_group_game_mode(chat_id, new_game_mode)
+
+        game_mode_set_message = await get_message(language, "game_mode_set")
+        if game_mode_set_message is None:
+            game_mode_set_message = await get_message(Language.EN, "game_mode_set") # fallback to english
 
         await callback_query.message.edit_text(
-            await get_message("en", "game_mode_set").format(mode=new_game_mode.capitalize()),
+            game_mode_set_message.format(mode=new_game_mode.capitalize()),  # Use correct language
             reply_markup=InlineKeyboardMarkup(
                 [
                     [InlineKeyboardButton("Back 🔙", callback_data="back_settings")],
@@ -215,3 +263,4 @@ async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
         )
     except Exception as e:
         logging.error(f"Error setting game mode: {e}")
+        await callback_query.answer(await get_message(Language.EN, "error_setting_game_mode"), show_alert=True) # English fallback
