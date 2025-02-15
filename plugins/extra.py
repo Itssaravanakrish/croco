@@ -128,33 +128,34 @@ async def stats_callback(client: Client, message: Message):
     except ValueError:
         language = Language.EN
 
-    user_count = 0  # Default value
-    chat_count = 0  # Default value
-    game_count = 0  # Default value
+    user_count = 0
+    chat_count = 0
+    game_count = 0
+    error_message = None  # Initialize error message
 
     try:
         user_count = await db.get_user_count()
     except Exception as e:
         logging.error(f"Error getting user count: {e}")
-        user_count_message = await get_message(Language.EN, "error_getting_user_count") # English fallback
-        user_count = user_count_message # Replace the count with the message
+        error_message = await get_message(Language.EN, "error_getting_user_count")  # Store the error message
 
     try:
         chat_count = await db.get_chat_count()
     except Exception as e:
         logging.error(f"Error getting chat count: {e}")
-        chat_count_message = await get_message(Language.EN, "error_getting_chat_count") # English fallback
-        chat_count = chat_count_message
+        if not error_message: # if there is no error message yet
+            error_message = await get_message(Language.EN, "error_getting_chat_count")
 
     try:
         game_count = await db.get_game_count()
     except Exception as e:
         logging.error(f"Error getting game count: {e}")
-        game_count_message = await get_message(Language.EN, "error_getting_game_count") # English fallback
-        game_count = game_count_message
+        if not error_message: # if there is no error message yet
+            error_message = await get_message(Language.EN, "error_getting_game_count")
 
-    stats_message = await get_message(
-        language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count
-    )
+    stats_message = await get_message(language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count)
 
-    await message.reply_text(stats_message)
+    if error_message:  # Send the error message separately
+        await message.reply_text(error_message)
+
+    await message.reply_text(stats_message)  # Then send the stats message
