@@ -24,7 +24,7 @@ class Database:
         self.users_collection: AsyncIOMotorCollection = self.database.users
         self.chats_collection: AsyncIOMotorCollection = self.database.chats
         self.games_collection: AsyncIOMotorCollection = self.database.games
-        logging.info(f"Connected to MongoDB (but not yet connected) at {uri}, database: {database_name}") #Notify connection is not yet established.
+        logging.info(f"MongoDB client initialized at {uri}, database: {database_name}")
 
     async def connect(self):
         try:
@@ -41,7 +41,7 @@ class Database:
         log_message = f"Failed to {action} for {identifier}: {e}"
         if query:
             log_message += f" (Query: {query})"
-        logging.error(log_message)
+        logging.error(log_message, exc_info=e)  # Include the original exception
         raise DatabaseConnectionError(log_message)
 
     # User management methods
@@ -58,7 +58,7 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add user", user_id, e)
 
-    async def get_user(self, user_id: str) -> Dict[str, Any]:
+    async def get_user(self, user_id: str) -> dict:  # More common type hint
         user = await self.users_collection.find_one({"user_id": user_id})
         if user is None:
             raise UserNotFoundError(f"User with ID {user_id} not found.")
@@ -76,7 +76,7 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("set game", chat_id, e)
 
-    async def get_game(self, chat_id: str) -> Optional[Dict[str, Any]]:
+    async def get_game(self, chat_id: str) -> Optional[dict]:  # More precise return type
         try:
             game = await self.games_collection.find_one({"chat_id": chat_id})
             return game
@@ -115,7 +115,7 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add chat", chat_id, e)
 
-    async def get_chat(self, chat_id: str) -> Optional[Dict[str, Any]]:
+    async def get_chat(self, chat_id: str) -> Optional[dict]:  # Consistent return type
         try:
             chat = await self.chats_collection.find_one({"chat_id": chat_id})
             return chat
