@@ -36,9 +36,10 @@ async def start_group(client: Client, message: Message):
 
     group_language_str = await db.get_chat_language(message.chat.id)
     try:
-        group_language = Language(group_language_str)
+        group_language = Language(group_language_str)  # Convert to enum, handle ValueError
     except ValueError:
-        group_language = Language.EN
+        group_language = Language.EN  # Default to EN if invalid
+        logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
 
     try:  # Wrap registration in try...except
         if not await register_user(user_id, user_data):
