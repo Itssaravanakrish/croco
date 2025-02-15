@@ -2,7 +2,7 @@
 import logging
 from typing import Dict, Optional
 from mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError  # Make sure this import is correct
-from script import messages  # Import the messages dictionary directly
+from script import messages, Language  # Import Language enum as well
 from pyrogram import Client
 
 # Configure logging
@@ -13,10 +13,16 @@ logging.basicConfig(
 
 async def get_message(language: str, key: str, **kwargs) -> Optional[str]:
     """Fetch localized message based on language."""
-    message_template = messages[language].get(key)  # Access using language enum
+
+    try:
+        language_enum = Language(language) # Convert the language string to Language enum member
+    except ValueError: # If the language string is not a valid enum member
+        language_enum = Language.EN # Default to English
+
+    message_template = messages.get(language_enum, {}).get(key)  # Use enum member as key, handle missing language
 
     if message_template is None:
-        logging.warning(f"Message key '{key}' not found for language '{language}'.")
+        logging.warning(f"Message key '{key}' not found for language '{language_enum.name}'.") # Use enum name
         return "Message not found"
     return message_template.format(**kwargs)
 
