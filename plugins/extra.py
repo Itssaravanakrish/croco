@@ -128,7 +128,11 @@ async def stats_callback(client: Client, message: Message):
     except ValueError:
         language = Language.EN
 
-    try:  # Add try-except blocks
+    user_count = 0  # Default value
+    chat_count = 0  # Default value
+    game_count = 0  # Default value
+
+    try:
         user_count = await db.get_user_count()
     except Exception as e:
         logging.error(f"Error getting user count: {e}")
