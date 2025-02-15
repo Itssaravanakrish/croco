@@ -25,7 +25,12 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-async def new_game(client: Client, message: Message, language="en", game_mode="easy") -> bool:
+async def new_game(client: Client, message: Message, language_str="en", game_mode="easy") -> bool:  # Language as string
+    try:
+        language = Language(language_str)  # Convert to enum
+    except ValueError:
+        language = Language.EN  # Default to EN
+
     word = choice(game_mode)
 
     bot_info = await client.get_me()
@@ -54,7 +59,7 @@ async def new_game(client: Client, message: Message, language="en", game_mode="e
         return False
 
     await message.reply_text(
-        await get_message(language, "game_started", name=message.from_user.first_name),
+        await get_message(language, "game_started", name=message.from_user.first_name, mode=game_mode, lang=language_str),  # Pass mode and lang!
         reply_markup=inline_keyboard_markup
     )
     return True
@@ -62,7 +67,11 @@ async def new_game(client: Client, message: Message, language="en", game_mode="e
 @Client.on_message(filters.group & filters.command("game", CMD))
 async def game_command(client: Client, message: Message):
     chat_id = message.chat.id
-    language = await db.get_chat_language(chat_id)
+    language_str = await db.get_chat_language(chat_id)  # Get as string
+    try:
+        language = Language(language_str)  # Convert to enum
+    except ValueError:
+        language = Language.EN  # Default to EN
     game_mode = await db.get_group_game_mode(chat_id)
 
     try:
@@ -75,8 +84,8 @@ async def game_command(client: Client, message: Message):
     if ongoing_game:
         time_elapsed = time() - ongoing_game['start']
         if time_elapsed >= GAME_TIMEOUT:
-            await handle_end_game(client, message, language)  # End the old game
-            await new_game(client, message, language, game_mode)  # Start a new game
+            await handle_end_game(client, message, language_str)  # End the old game (pass string)
+            await new_game(client, message, language_str, game_mode)  # Start a new game (pass string)
             return
 
         host_id = ongoing_game["host"]["id"]
@@ -84,7 +93,7 @@ async def game_command(client: Client, message: Message):
             await message.reply_text(await get_message(language, "game_already_started"))
             return
 
-    await new_game(client, message, language, game_mode)  # Start a new game
+    await new_game(client, message, language_str, game_mode)  # Start a new game (pass string)
     
 @Client.on_message(filters.group)  # Filter all group messages
 async def group_message_handler(client: Client, message: Message):
@@ -215,11 +224,16 @@ async def set_game_mode(client: Client, message: Message):
         await message.reply_text(await get_message(language, "database_error"))
         return
 
-async def handle_end_game(client: Client, message: Message, language: str):
+async def handle_end_game(client: Client, message: Message, language_str: str):  # Language as string
+    try:
+        language = Language(language_str)  # Convert to enum
+    except ValueError:
+        language = Language.EN  # Default to EN
+
     try:
         await db.remove_game(message.chat.id)
-        await message.reply_text(await get_message(language, "game_ended"))  # Inform users the game has ended
+        await message.reply_text(await get_message(language, "game_ended"))  # Inform users the game has ended (pass enum)
     except Exception as e:
         logging.error(f"Error removing game from database: {e}")
-        await message.reply_text(await get_message(language, "database_error"))  # Inform users of the error
+        await message.reply_text(await get_message(language, "database_error"))  # Inform users of the error (pass enum)
         return  # Important: Exit the function after handling the error
