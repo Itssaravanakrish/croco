@@ -2,6 +2,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from pyrogram import Client, filters
 from mongo.users_and_chats import db
 from utils import get_message, register_user, register_chat, is_user_admin
+from script import Language # Import Language enum
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
