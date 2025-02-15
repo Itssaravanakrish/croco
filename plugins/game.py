@@ -5,6 +5,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from words import choice
 from mongo.users_and_chats import db
 from utils import get_message, is_user_admin
+from script import Language # Import Language enum
 
 # Configure logging
 logging.basicConfig(
