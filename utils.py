@@ -1,4 +1,3 @@
-# utils.py
 import logging
 from typing import Dict, Optional
 from mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError  # Make sure this import is correct
@@ -15,15 +14,15 @@ async def get_message(language: str, key: str, **kwargs) -> Optional[str]:
     """Fetch localized message based on language."""
 
     try:
-        language_enum = Language(language) # Convert the language string to Language enum member
-    except ValueError: # If the language string is not a valid enum member
-        language_enum = Language.EN # Default to English
+        language_enum = Language(language)  # Convert the language string to Language enum member
+    except ValueError:  # If the language string is not a valid enum member
+        language_enum = Language.EN  # Default to English
 
     message_template = messages.get(language_enum, {}).get(key)  # Use enum member as key, handle missing language
 
     if message_template is None:
-        logging.warning(f"Message key '{key}' not found for language '{language_enum.name}'.") # Use enum name
-        return "Message not found"
+        logging.warning(f"Message key '{key}' not found for language '{language_enum.name}'.")  # Use enum name
+        return "Message not found"  # Or return None if you prefer
     return message_template.format(**kwargs)
 
 async def register_item(item_type: str, item_id: str, item_data: Dict) -> bool:
@@ -40,7 +39,7 @@ async def register_item(item_type: str, item_id: str, item_data: Dict) -> bool:
             return True
     except Exception as e:
         logging.error(f"Failed to register {item_type} {item_id}: {e}")
-        return False
+        return False  # Return False on error
 
 async def register_user(user_id: str, user_data: Dict) -> bool:
     return await register_item("user", user_id, user_data)
@@ -52,9 +51,7 @@ async def is_user_admin(client: Client, chat_id: str, user_id: str) -> bool:
     """Check if a user is an admin in a specific chat."""
     try:
         chat_member = await client.get_chat_member(chat_id, user_id)
-        if chat_member.status in ["kicked", "left", "restricted"]:  # More concise check
-            return False
-        return chat_member.status in ["administrator", "creator"]
+        return chat_member.status in ["creator", "administrator", "restricted"]  # More concise check, include restricted
     except Exception as e:
         logging.error(f"Failed to check if user {user_id} is admin in chat {chat_id}: {e}")
         return False
@@ -77,6 +74,7 @@ async def get_chat_language(chat_id: str) -> str:  # Correct Name
         return language
     except Exception as e:
         logging.error(f"Failed to get chat language for chat {chat_id}: {e}")
+        logging.warning(f"Error getting language for {chat_id}. Defaulting to 'en'.")  # Add warning
         return "en"  # Default to English if there's an error
 
 async def set_group_game_mode(chat_id: str, game_mode: str) -> bool:  # Correct Name
@@ -97,4 +95,5 @@ async def get_group_game_mode(chat_id: str) -> str:  # Correct Name
         return game_mode
     except Exception as e:
         logging.error(f"Failed to get group game mode for chat {chat_id}: {e}")
+        logging.warning(f"Error getting game mode for {chat_id}. Defaulting to 'easy'.")  # Add warning
         return "easy"  # Default to easy if there's an error
