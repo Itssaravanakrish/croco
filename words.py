@@ -1,15 +1,22 @@
 import logging
 from random import choice as choice_
 from pathlib import Path
+import os
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 
 def process_word(word: str) -> str:
     """Process a word by replacing underscores with spaces and converting to lowercase."""
     return word.replace('_', ' ').lower()
 
-# Define the path to the word list files for different game modes
-easy_wordlist_path = Path('wordlists/easy.txt')
-hard_wordlist_path = Path('wordlists/hard.txt')
-adult_wordlist_path = Path('wordlists/adult.txt')
+# Get the directory where this script is located
+script_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+
+# Define the path to the word list files for different game modes using script_dir
+easy_wordlist_path = script_dir / 'wordlists' / 'easy.txt'
+hard_wordlist_path = script_dir / 'wordlists' / 'hard.txt'
+adult_wordlist_path = script_dir / 'wordlists' / 'adult.txt'
 
 # Initialize the list of words for each game mode
 easy_words = []
@@ -21,18 +28,25 @@ def load_words(file_path):
     words = []
     try:
         with file_path.open(encoding='UTF-8') as file:
-            words = list(map(process_word, file.read().split()))
+            words = [process_word(line.strip()) for line in file] #Process each line, striping the newline character.
         logging.info(f"Loaded {len(words)} words from {file_path.name}.")
     except FileNotFoundError:
         logging.error(f"Word list file {file_path.name} not found.")
+        raise FileNotFoundError(f"Word list file {file_path.name} not found.")  # Raise FileNotFoundError.
+
     return words
 
-easy_words = load_words(easy_wordlist_path)
-hard_words = load_words(hard_wordlist_path)
-adult_words = load_words(adult_wordlist_path)
+try:
+    easy_words = load_words(easy_wordlist_path)
+    hard_words = load_words(hard_wordlist_path)
+    adult_words = load_words(adult_wordlist_path)
+except FileNotFoundError as e:
+    logging.error(f"Failed to load word lists: {e}")
+    # Handle the error appropriately, e.g., exit the program or use default words.
+    # For now, let's keep the lists empty, so choice() will raise an exception.
+
 
 def choice(game_mode: str) -> str:
-    """Select a random word from the word list based on the game mode. Returns None if the list is empty."""
     if game_mode == "easy":
         word_list = easy_words
     elif game_mode == "hard":
@@ -40,10 +54,10 @@ def choice(game_mode: str) -> str:
     elif game_mode == "adult":
         word_list = adult_words
     else:
-        logging.warning("Invalid game mode. Defaulting to easy.")
-        word_list = easy_words
+        logging.warning(f"Invalid game mode: {game_mode}. Defaulting to easy.")  # Log the invalid mode
+        word_list = easy_words  # Explicitly default to easy words
 
     if not word_list:
-        logging.warning("No words available to choose from.")
-        return None  # Handle the case where the word list is empty
+        raise ValueError("No words available for the specified game mode.")
+
     return choice_(word_list)
