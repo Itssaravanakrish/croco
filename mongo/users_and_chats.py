@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME  # Ensure this file exists with your MongoDB URI
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
+from pymongo.results import UpdateResult  # Import UpdateResult
 
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
@@ -91,11 +92,11 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("remove game", chat_id, e)
 
-    async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> Any:
+    async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> UpdateResult:  # Specific return type
         try:
             result = await self.games_collection.update_one(
                 {"chat_id": chat_id},
-                {"$set": update_data}  # Atomic update with $set
+                {"$set": update_data}
             )
             return result
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
