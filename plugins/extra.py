@@ -6,25 +6,30 @@ from pyrogram.types import Message
 from mongo.users_and_chats import db
 from config import SUDO_USERS
 from utils import get_message
-from script import Language # Import Language enum
+from script import Language  # Import Language enum
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 CMD = ["/", "."]
 
 @Client.on_message(filters.command("alive", CMD))
 async def alive_callback(client: Client, message: Message):
-    language = await db.get_chat_language(message.chat.id)
+    language_str = await db.get_chat_language(message.chat.id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
     logging.info(f"Alive command received from {message.from_user.first_name} in chat {message.chat.id}.")
     await message.reply_text(await get_message(language, "alive"))
 
 @Client.on_message(filters.command("ping", CMD))
 async def ping_callback(client: Client, message: Message):
-    language = await db.get_chat_language(message.chat.id)
+    language_str = await db.get_chat_language(message.chat.id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
     await message.reply_text(await get_message(language, "ping"))
 
 @Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
@@ -117,25 +122,32 @@ async def broadcast_group_callback(client: Client, message: Message):
 
 @Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
 async def stats_callback(client: Client, message: Message):
-    language = await db.get_chat_language(message.chat.id)
+    language_str = await db.get_chat_language(message.chat.id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
 
     try:  # Add try-except blocks
         user_count = await db.get_user_count()
     except Exception as e:
         logging.error(f"Error getting user count: {e}")
-        user_count = "Error"  # Or some default value
+        user_count_message = await get_message(Language.EN, "error_getting_user_count") # English fallback
+        user_count = user_count_message # Replace the count with the message
 
     try:
         chat_count = await db.get_chat_count()
     except Exception as e:
         logging.error(f"Error getting chat count: {e}")
-        chat_count = "Error"
+        chat_count_message = await get_message(Language.EN, "error_getting_chat_count") # English fallback
+        chat_count = chat_count_message
 
     try:
         game_count = await db.get_game_count()
     except Exception as e:
         logging.error(f"Error getting game count: {e}")
-        game_count = "Error"
+        game_count_message = await get_message(Language.EN, "error_getting_game_count") # English fallback
+        game_count = game_count_message
 
     stats_message = await get_message(
         language, "stats", user_count=user_count, chat_count=chat_count, game_count=game_count
