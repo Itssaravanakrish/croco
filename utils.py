@@ -77,23 +77,23 @@ async def get_chat_language(chat_id: str) -> str:  # Correct Name
         logging.warning(f"Error getting language for {chat_id}. Defaulting to 'en'.")  # Add warning
         return "en"  # Default to English if there's an error
 
-async def set_group_game_mode(chat_id: str, game_mode: str) -> bool:  # Correct Name
+async def set_group_game_mode(chat_id: str, game_modes: List[str]) -> bool:  # game_modes is a LIST
     """Set the group game mode in the database."""
     try:
-        await db.set_group_game_mode(chat_id, game_mode)
-        logging.info(f"Group game mode for chat {chat_id} set to {game_mode}.")
+        await db.set_group_game_mode(chat_id, game_modes)  # Pass the LIST to db
+        logging.info(f"Group game mode for chat {chat_id} set to {game_modes}.")
         return True
     except Exception as e:
         logging.error(f"Failed to set group game mode for chat {chat_id}: {e}")
         return False
 
-async def get_group_game_mode(chat_id: str) -> str:  # Correct Name
+async def get_group_game_mode(chat_id: str) -> List[str]:  # Returns a LIST
     """Get the group game mode from the database."""
     try:
-        game_mode = await db.get_group_game_mode(chat_id)
-        logging.info(f"Retrieved group game mode for chat {chat_id}: {game_mode}.")
-        return game_mode
+        game_modes = await db.get_group_game_mode(chat_id)  # Get the LIST from db
+        logging.info(f"Retrieved group game mode for chat {chat_id}: {game_modes}.")
+        return game_modes  # Return the LIST
     except Exception as e:
         logging.error(f"Failed to get group game mode for chat {chat_id}: {e}")
-        logging.warning(f"Error getting game mode for {chat_id}. Defaulting to 'easy'.")  # Add warning
-        return "easy"  # Default to easy if there's an error
+        logging.warning(f"Error getting game mode for {chat_id}. Defaulting to ['easy'].")
+        return ["easy"]  # Default to a LIST
