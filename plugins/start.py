@@ -1,9 +1,10 @@
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from pyrogram import Client, filters
-from mongo.users_and_chats import db
-from utils import get_message, register_user, register_chat, is_user_admin
-from script import Language  # Import Language enum
 import logging
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatType, ChatMemberUpdated, ChatMembersAdded
+from pyrogram import Client, filters
+from mongo.users_and_chats import db  # Replace with your actual module path
+from utils import get_message, register_user, register_chat, is_user_admin  # Replace with your actual module path
+from script import Language  # Replace with your actual module path
+from words import get_word_list, choice  # Import from words.py
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -15,7 +16,7 @@ inline_keyboard_markup_pm = InlineKeyboardMarkup(
         [
             InlineKeyboardButton(
                 "Add Me to Your Group 👥",
-                url="https://t.me/Crocodile_game_enBot?startgroup=invite",  # Replace with your bot's invite link
+                url="https://t.me/Crocodile_game_enBot?startgroup=true",  # Replace with your bot's username
             )
         ],
         [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/xTamilChat")],  # Replace with your support group link
@@ -23,7 +24,26 @@ inline_keyboard_markup_pm = InlineKeyboardMarkup(
     ]
 )
 
-@Client.on_message(filters.command("start", CMD))  # Remove filters.group and filters.private
+# Inline keyboard for group messages
+inline_keyboard_markup_grp = InlineKeyboardMarkup(
+    [
+        [
+            InlineKeyboardButton(
+                "Add Me to Your Group 👥", url="https://t.me/Crocodile_game_enBot?startgroup=true"  # Replace with your bot's username
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Support Our Group 💖", url="https://t.me/Xtamilchat"  # Replace with your support group link
+            )
+        ],
+        [InlineKeyboardButton("Settings ⚙️", callback_data="settings"),
+         InlineKeyboardButton("Close ❌", callback_data="close")],
+    ]
+)
+
+
+@Client.on_message(filters.command("start", CMD))
 async def start_handler(client: Client, message: Message):
     user_id = str(message.from_user.id)
     user_data = {
@@ -31,99 +51,108 @@ async def start_handler(client: Client, message: Message):
         "username": message.from_user.username,
     }
 
-    if message.chat.type == ChatType.PRIVATE:  # Check chat type
-        print("Start command received in private chat.")
-        # Private chat logic
-        if not await register_user(user_id, user_data):
-            await message.reply_text(await get_message(Language.EN, "error_registering_user"))
-            return
-
-        language = Language.EN  # Default language for private chats
-        welcome_message = await get_message(language, "welcome")
-        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
-
-    elif message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:  # Check for all group types
-        print("Start command received in group chat.")
-        # Group chat logic
-        chat_id = str(message.chat.id)
-        chat_data = {"title": message.chat.title, "type": message.chat.type.name}
-
-        group_language_str = await db.get_chat_language(message.chat.id)
-        try:
-            group_language = Language(group_language_str)
-        except ValueError:
-            group_language = Language.EN
-            logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
-
-        try:
+    try:
+        if message.chat.type == ChatType.PRIVATE:
             if not await register_user(user_id, user_data):
-                await message.reply_text(await get_message(group_language, "error_registering_user"))
+                await message.reply_text(await get_message(Language.EN, "error_registering_user"))
                 return
 
-            if not await register_chat(chat_id, chat_data):
-                await message.reply_text(await get_message(group_language, "error_registering_chat"))
-                return
-        except Exception as e:
-            logging.error(f"Error during registration: {e}")
-            await message.reply_text(await get_message(group_language, "error_during_registration"))
-            return
+            language = Language.EN  # Default language for private chats
+            welcome_message = await get_message(language, "welcome")
+            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
-        inline_keyboard_markup_grp = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Add Me to Your Group 👥", url="https://t.me/Crocodile_game_enBot?startgroup=new"  # Replace with your bot's username
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Support Our Group 💖", url="https://t.me/Xtamilchat"  # Replace with your support group link
-                    )
-                ],
-                [InlineKeyboardButton("Settings ⚙️", callback_data="settings"),  # Settings and Close on the third row
-                 InlineKeyboardButton("Close ❌", callback_data="close")],
-            ]
-        )
+        elif message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+            chat_id = str(message.chat.id)
+            chat_data = {"title": message.chat.title, "type": message.chat.type.name}
 
-        welcome_message = await get_message(group_language, "welcome")
-        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)  # Correct indentation HERE
+            # 1. Handle BOT ADDED to group (new_chat_members):
+            if message.new_chat_members:
+                for new_member in message.new_chat_members:
+                    if new_member.id == client.me.id:  # Check if it's the bot
+                        group_language = Language.EN  # Default language
+                        group_language_str = await db.get_chat_language(message.chat.id)
+                        if group_language_str:
+                            try:
+                                group_language = Language(group_language_str)
+                            except ValueError:
+                                logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
 
-    else:
-        print(f"Start command received in unknown chat type: {message.chat.type}")
-        # Handle other chat types if needed. You can log or send a message.
-        await message.reply_text("This command is not supported in this chat type.")  # Example
+                        try:
+                            if not await register_chat(chat_id, chat_data):
+                                await message.reply_text(await get_message(group_language, "error_registering_chat"))
+                                return
+
+                            welcome_message = await get_message(group_language, "welcome_new_group")  # New welcome message
+                            await message.reply_text(welcome_message)
+                        except Exception as e:
+                            logging.exception(f"Error in new_chat_members handler: {e}")
+                            await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+                        return  # VERY IMPORTANT: Exit after handling bot added
+
+            # 2. Handle /start COMMAND in group (regular message):
+            group_language = Language.EN  # Default language
+            group_language_str = await db.get_chat_language(message.chat.id)
+            if group_language_str:
+                try:
+                    group_language = Language(group_language_str)
+                except ValueError:
+                    logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
+
+            try:
+                if not await register_user(user_id, user_data):  # Register user if needed
+                    await message.reply_text(await get_message(group_language, "error_registering_user"))
+                    return
+
+                welcome_message = await get_message(group_language, "welcome")  # Regular /start welcome message
+                await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)  # Send with markup
+
+            except Exception as e:
+                logging.exception(f"Error in /start command handler: {e}")
+                await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+
+        else:
+            logging.warning(f"Start command received in unknown chat type: {message.chat.type}")
+            await message.reply_text("This command is not supported in this chat type.")
+
+    except Exception as e:
+        logging.exception(f"Error in start_handler: {e}")
+        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
 
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
-    await callback_query.answer()
+    await callback_query.answer()  # Acknowledge button press
 
-    if callback_query.data == "close":
-        await callback_query.message.edit_reply_markup(reply_markup=None)
+    try:
+        if callback_query.data == "close":
+            await callback_query.message.edit_reply_markup(reply_markup=None)
 
-    elif callback_query.data == "settings":
-        await settings_callback(client, callback_query)
-
-    elif callback_query.data.startswith("change_language"):
-        await change_language_callback(client, callback_query)
-
-    elif callback_query.data.startswith("set_language_"):
-        await set_language_callback(client, callback_query)
-
-    elif callback_query.data.startswith("change_game_mode"):
-        await change_game_mode_callback(client, callback_query)
-
-    elif callback_query.data.startswith("set_game_mode_"):
-        await set_game_mode_callback(client, callback_query)
-
-    elif callback_query.data.startswith("back_"):
-        target = callback_query.data.split("_")[1]
-        if target == "settings":
+        elif callback_query.data == "settings":
             await settings_callback(client, callback_query)
-        elif target == "language":
+
+        elif callback_query.data.startswith("change_language"):
             await change_language_callback(client, callback_query)
-        elif target == "game_mode":
+
+        elif callback_query.data.startswith("set_language_"):
+            await set_language_callback(client, callback_query)
+
+        elif callback_query.data.startswith("change_game_mode"):
             await change_game_mode_callback(client, callback_query)
 
+        elif callback_query.data.startswith("set_game_mode_"):
+            await set_game_mode_callback(client, callback_query)
+
+        elif callback_query.data.startswith("back_"):
+            target = callback_query.data.split("_")[1]
+            if target == "settings":
+                await settings_callback(client, callback_query)
+            elif target == "language":
+                await change_language_callback(client, callback_query)
+            elif target == "game_mode":
+                await change_game_mode_callback(client, callback_query)
+
+    except Exception as e:
+        logging.exception(f"Error in button_callback: {e}")
+        await callback_query.message.reply_text(await get_message(Language.EN, "error_processing_command"))  # Or a more specific message
 
 async def settings_callback(client: Client, callback_query: CallbackQuery):
     if not await is_user_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
@@ -149,9 +178,8 @@ async def settings_callback(client: Client, callback_query: CallbackQuery):
             ),
         )
     except Exception as e:
-        logging.error(f"Error editing message: {e}")
-        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True) # English fallback
-
+        logging.exception(f"Error editing message: {e}")
+        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True)  # English fallback
 
 async def change_language_callback(client: Client, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
@@ -174,10 +202,9 @@ async def change_language_callback(client: Client, callback_query: CallbackQuery
             ),
         )
     except Exception as e:
-        logging.error(f"Error editing message: {e}")
-        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True) # English fallback
-
-
+        logging.exception(f"Error editing message: {e}")
+        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True)  # English fallback
+        
 async def set_language_callback(client: Client, callback_query: CallbackQuery):
     new_language_str = callback_query.data.split("_")[-1]  # Get language as string
     try:
@@ -194,7 +221,7 @@ async def set_language_callback(client: Client, callback_query: CallbackQuery):
         # Get the correct "language_set" message based on the *new* language:
         language_set_message = await get_message(new_language, "language_set")
         if language_set_message is None:  # Check if message exists for the language
-            language_set_message = await get_message(Language.EN, "language_set") # fallback to english
+            language_set_message = await get_message(Language.EN, "language_set")  # fallback to english
 
         await callback_query.message.edit_text(
             language_set_message.format(language=new_language_str.upper()),  # Format with string
@@ -205,8 +232,8 @@ async def set_language_callback(client: Client, callback_query: CallbackQuery):
             ),
         )
     except Exception as e:
-        logging.error(f"Error setting language: {e}")
-        await callback_query.answer(await get_message(Language.EN, "error_setting_language"), show_alert=True) # Alert in english
+        logging.exception(f"Error setting language: {e}")
+        await callback_query.answer(await get_message(Language.EN, "error_setting_language"), show_alert=True)  # Alert in english
         # Handle the error, maybe send a message to the user
 
 async def change_game_mode_callback(client: Client, callback_query: CallbackQuery):
@@ -230,9 +257,8 @@ async def change_game_mode_callback(client: Client, callback_query: CallbackQuer
             ),
         )
     except Exception as e:
-        logging.error(f"Error editing message: {e}")
-        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True) # English fallback
-
+        logging.exception(f"Error editing message: {e}")
+        await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True)  # English fallback
 
 async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
     new_game_mode_str = callback_query.data.split("_")[-1]  # Get the mode string (e.g., "easy")
@@ -244,11 +270,7 @@ async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
         language = Language.EN
 
     try:
-        # Convert the string to a LIST (important!)
-        new_game_mode_list = [new_game_mode_str]  # Make it a list
-
-        await db.set_group_game_mode(chat_id, new_game_mode_list)  # Pass the LIST
-
+        # No database update needed! Just acknowledge and update the message
         game_mode_set_message = await get_message(language, "game_mode_set")
         if game_mode_set_message is None:
             game_mode_set_message = await get_message(Language.EN, "game_mode_set")
@@ -261,6 +283,9 @@ async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
                 ]
             ),
         )
+        # Here, you would likely want to store new_game_mode_str in the database
+        # if you want the game mode to persist.
+        await db.set_group_game_mode(chat_id, [new_game_mode_str])  # Store as a list in DB
     except Exception as e:
-        logging.error(f"Error setting game mode: {e}")
+        logging.exception(f"Error setting game mode: {e}")
         await callback_query.answer(await get_message(Language.EN, "error_setting_game_mode"), show_alert=True)
