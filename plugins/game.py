@@ -106,9 +106,9 @@ async def group_message_handler(client: Client, message: Message):
     chat_id = message.chat.id
     language_str = await db.get_chat_language(chat_id)
     try:
-        language = Language(language_str)  # Convert to enum, handle ValueError
+        language = Language(language_str)
     except ValueError:
-        language = Language.EN  # Default to EN if invalid
+        language = Language.EN
         logging.warning(f"Invalid language string '{language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
 
     game = await db.get_game(chat_id)
@@ -119,17 +119,24 @@ async def group_message_handler(client: Client, message: Message):
     host_id = game.get("host", {}).get("id")
     current_word = game.get("word")
 
+    # Debug print statements:
+    print(f"Current Word: {current_word}")
+    print(f"Message Text: {message.text}")
+    if message.text:  # Check if message.text exists before lower() and strip()
+      print(f"Lowercase Current Word: {current_word.lower().strip() if current_word else None}") # handle current_word being None
+      print(f"Lowercase Message Text: {message.text.lower().strip()}")
+
     if message.from_user.id == int(host_id) and message.text:
-        if current_word and current_word.lower() in message.text.lower():
+        if current_word and current_word.lower().strip() in message.text.lower().strip():  # Host guess check (case-insensitive, whitespace-stripped)
             await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA")
-            await message.reply_text(await get_message(language, "dont_tell_answer"))  # Use the enum!
+            await message.reply_text(await get_message(language, "dont_tell_answer"))
 
     elif message.from_user.id != int(host_id) and current_word and message.text:
-        if current_word.lower() == message.text.lower():
+        if current_word.lower().strip() == message.text.lower().strip():  # Player guess check (case-insensitive, whitespace-stripped)
             winner_id = message.from_user.id
             winner_name = message.from_user.first_name
 
-            await message.reply_text(await get_message(language, "correct_answer", winner=winner_name))  # Use the enum!
+            await message.reply_text(await get_message(language, "correct_answer", winner=winner_name))
 
             new_word = choice(game.get("game_mode"))
             new_game_data = {
@@ -142,17 +149,13 @@ async def group_message_handler(client: Client, message: Message):
                 await db.set_game(chat_id, new_game_data)
             except Exception as e:
                 logging.error(f"Error setting game in database: {e}")
-                await message.reply_text(await get_message(language, "database_error"))  # Use the enum!
+                await message.reply_text(await get_message(language, "database_error"))
                 return
 
-            new_game_message = await get_message(language, "new_game_started")  # Use the enum!
-            await message.reply_text(new_game_message)
+            # Announce the new game and new host in the GROUP chat using the existing "game_started" message:
+            new_game_message = await get_message(language, "game_started", name=winner_name, mode=game.get("game_mode"), lang=language.value)  # All placeholders filled
 
-            try:
-                host_user = await client.get_users(int(host_id))
-                await client.send_message(int(host_id), await get_message(language, "game_ended_confirmation"))  # Use the enum!
-            except Exception as e:
-                logging.error(f"Error notifying previous host {host_id}: {e}")
+            await message.reply_text(new_game_message)
 
 @Client.on_callback_query(filters.regex("view|next|end_game"))
 async def game_action_callback(client: Client, callback_query: CallbackQuery):
@@ -189,24 +192,29 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
         return
 
     if callback_query.data == "view":
-        if user_id == host_id:  # Only answer if it's the host
+        if user_id == host_id:
             word = game['word']
-            await callback_query.answer(await get_message(language, "current_word", word=word), show_alert=True) # Show the word in a popup for the host.
+            await callback_query.answer(await get_message(language, "current_word", word=word), show_alert=True)
         else:
-            await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)  # Inform other users.
+            await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)
 
     elif callback_query.data == "next":
         if user_id == host_id:
             try:
                 new_word = choice(game['game_mode'])
-                result = await db.update_game(chat_id, {"$set": {"word": new_word}})
-                if result.modified_count == 1:
-                    await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True) # Show the new word in a popup for the host.
-                else:
-                    logging.error(f"Failed to update word (modified_count: {result.modified_count}) for chat {chat_id}")
-                    await callback_query.answer(await get_message(language, "word_not_updated"), show_alert=True)
+                print(f"New word chosen: {new_word}")
+
+                update_data = {"$set": {"word": new_word}}
+                print(f"Update data being sent to db: {update_data}")
+
+                print(f"Updating game in chat {chat_id}...")
+
+                await db.update_game(chat_id, update_data)
+
+                await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True)
+
             except Exception as e:
-                logging.error(f"Error updating word in database: {e}")
+                logging.exception(f"Error updating word in database: {e}")
                 await callback_query.answer(await get_message(language, "database_error"), show_alert=True)
                 return
         else:
@@ -214,7 +222,7 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
 
     elif callback_query.data == "end_game":
         if user_id == host_id:
-            await handle_end_game(client, callback_query.message, language) # Pass enum
+            await handle_end_game(client, callback_query.message, language)
             await callback_query.message.delete()
             await client.send_message(chat_id, await get_message(language, "game_ended"))
             await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
