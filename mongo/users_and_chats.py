@@ -161,7 +161,8 @@ class Database:
 
     # Group game mode management methods
     async def set_group_game_mode(self, chat_id: str, game_mode: str) -> None:
-        try await self.chats_collection.update_one(
+        try:
+            await self.chats_collection.update_one(
                 {"chat_id": chat_id},
                 {"$set": {"game_mode": game_mode}},
                 upsert=True
