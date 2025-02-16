@@ -93,9 +93,10 @@ async def group_message_handler(client: Client, message: Message):
     chat_id = message.chat.id
     language_str = await db.get_chat_language(chat_id)
     try:
-        language = Language(language_str)
+        language = Language(language_str)  # Convert to enum, handle ValueError
     except ValueError:
-        language = Language.EN
+        language = Language.EN  # Default to EN if invalid
+        logging.warning(f"Invalid language string '{language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
 
     game = await db.get_game(chat_id)
 
@@ -108,14 +109,14 @@ async def group_message_handler(client: Client, message: Message):
     if message.from_user.id == int(host_id) and message.text:
         if current_word and current_word.lower() in message.text.lower():
             await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA")
-            await message.reply_text(await get_message(language, "dont_tell_answer"))
+            await message.reply_text(await get_message(language, "dont_tell_answer"))  # Use the enum!
 
     elif message.from_user.id != int(host_id) and current_word and message.text:
         if current_word.lower() == message.text.lower():
             winner_id = message.from_user.id
             winner_name = message.from_user.first_name
 
-            await message.reply_text(await get_message(language, "correct_answer", winner=winner_name))
+            await message.reply_text(await get_message(language, "correct_answer", winner=winner_name))  # Use the enum!
 
             new_word = choice(game.get("game_mode"))
             new_game_data = {
@@ -128,15 +129,15 @@ async def group_message_handler(client: Client, message: Message):
                 await db.set_game(chat_id, new_game_data)
             except Exception as e:
                 logging.error(f"Error setting game in database: {e}")
-                await message.reply_text(await get_message(language, "database_error"))
+                await message.reply_text(await get_message(language, "database_error"))  # Use the enum!
                 return
 
-            new_game_message = await get_message(language, "new_game_started")
+            new_game_message = await get_message(language, "new_game_started")  # Use the enum!
             await message.reply_text(new_game_message)
 
             try:
                 host_user = await client.get_users(int(host_id))
-                await client.send_message(int(host_id), await get_message(language, "game_ended_confirmation"))
+                await client.send_message(int(host_id), await get_message(language, "game_ended_confirmation"))  # Use the enum!
             except Exception as e:
                 logging.error(f"Error notifying previous host {host_id}: {e}")
 
