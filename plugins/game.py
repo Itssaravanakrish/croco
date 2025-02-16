@@ -65,7 +65,7 @@ async def new_game(client: Client, message: Message, language: Language, game_mo
         retrieved_language = language # If no game data, use the language passed to the function
 
     await message.reply_text(
-        await get_message(retrieved_language.value, "game_started", name=message.from_user.first_name, mode=game_mode),  # Use retrieved_language.value
+        await get_message(retrieved_language.value, "game_started", name=message.from_user.first_name, mode=game_mode, lang=retrieved_language.value),  # Pass retrieved_language.value as lang
         reply_markup=inline_keyboard_markup
     )
     return True
