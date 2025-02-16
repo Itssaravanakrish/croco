@@ -164,12 +164,14 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     chat_id = callback_query.message.chat.id
 
+    # Get the language for the chat
     language_str = await db.get_chat_language(chat_id)
     try:
         language = Language(language_str)
     except ValueError:
         language = Language.EN
 
+    # Retrieve the current game state
     try:
         game = await db.get_game(chat_id)
     except Exception as e:
@@ -183,51 +185,43 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
 
     host_id = game['host']['id']
 
+    # Check if the user is the host
     if user_id != host_id:
         await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)
         return
 
+    # Check for game timeout
     time_elapsed = time() - game['start']
     if time_elapsed >= GAME_TIMEOUT:
         await handle_end_game(client, callback_query.message, language)
         await callback_query.message.edit_text(await get_message(language, "game_timed_out"))
         return
 
+    # Handle the "view" action
     if callback_query.data == "view":
-        if user_id == host_id:
-            word = game['word']
-            await callback_query.answer(await get_message(language, "current_word", word=word), show_alert=True)
-        else:
-            await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)
+        word = game['word']
+        await callback_query.answer(await get_message(language, "current_word", word=word), show_alert=True)
 
+    # Handle the "next" action
     elif callback_query.data == "next":
-        if user_id == host_id:
-            try:
-                new_word = choice(game['game_mode'])
-                print(f"New word chosen: {new_word}")
+        try:
+            new_word = choice(game['game_mode'])  # Ensure game['game_mode'] is a list of words
+            update_data = {"$set": {"word": new_word}}  # Correct: Use $set
+            print(f"Update data being sent to db: {update_data}")  # Debug print
+            await db.update_game(chat_id, update_data)  # Update the game with the new word
 
-                update_data = {"$set": {"word": new_word}}
-                print(f"Update data being sent to db: {update_data}")
+            await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True)
 
-                print(f"Updating game in chat {chat_id}...")
+        except Exception as e:
+            logging.exception(f"Error updating word in database: {e}")
+            await callback_query.answer(await get_message(language, "database_error"), show_alert=True)
 
-                await db.update_game(chat_id, update_data)
-
-                await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True)
-
-            except Exception as e:
-                logging.exception(f"Error updating word in database: {e}")
-                await callback_query.answer(await get_message(language, "database_error"), show_alert=True)
-                return
-        else:
-            await callback_query.answer(await get_message(language, "not_leader"), show_alert=True)
-
+    # Handle the "end_game" action
     elif callback_query.data == "end_game":
-        if user_id == host_id:
-            await handle_end_game(client, callback_query.message, language)
-            await callback_query.message.delete()
-            await client.send_message(chat_id, await get_message(language, "game_ended"))
-            await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
+        await handle_end_game(client, callback_query.message, language)
+        await callback_query.message.delete()
+        await client.send_message(chat_id, await get_message(language, "game_ended"))
+        await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
 
 
 @Client.on_message(filters.group & filters.command("set_mode", CMD))
