@@ -235,7 +235,7 @@ async def change_game_mode_callback(client: Client, callback_query: CallbackQuer
 
 
 async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
-    new_game_mode = callback_query.data.split("_")[-1]
+    new_game_mode_str = callback_query.data.split("_")[-1]  # Get the mode string (e.g., "easy")
     chat_id = callback_query.message.chat.id
     language_str = await db.get_chat_language(chat_id)
     try:
@@ -244,14 +244,17 @@ async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
         language = Language.EN
 
     try:
-        await db.set_group_game_mode(chat_id, new_game_mode)
+        # Convert the string to a LIST (important!)
+        new_game_mode_list = [new_game_mode_str]  # Make it a list
+
+        await db.set_group_game_mode(chat_id, new_game_mode_list)  # Pass the LIST
 
         game_mode_set_message = await get_message(language, "game_mode_set")
         if game_mode_set_message is None:
-            game_mode_set_message = await get_message(Language.EN, "game_mode_set") # fallback to english
+            game_mode_set_message = await get_message(Language.EN, "game_mode_set")
 
         await callback_query.message.edit_text(
-            game_mode_set_message.format(mode=new_game_mode.capitalize()),  # Use correct language
+            game_mode_set_message.format(mode=new_game_mode_str.capitalize()),  # Use the string
             reply_markup=InlineKeyboardMarkup(
                 [
                     [InlineKeyboardButton("Back 🔙", callback_data="back_settings")],
@@ -260,4 +263,4 @@ async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
         )
     except Exception as e:
         logging.error(f"Error setting game mode: {e}")
-        await callback_query.answer(await get_message(Language.EN, "error_setting_game_mode"), show_alert=True) # English fallback
+        await callback_query.answer(await get_message(Language.EN, "error_setting_game_mode"), show_alert=True)
