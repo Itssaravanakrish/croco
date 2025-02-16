@@ -92,15 +92,20 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("remove game", chat_id, e)
 
-    async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> UpdateResult:  # Specific return type
-        try:
-            result = await self.games_collection.update_one(
-                {"chat_id": chat_id},
-                {"$set": update_data}
-            )
-            return result
-        except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            await self.handle_db_error("update game", chat_id, e)
+async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> UpdateResult:
+    try:
+        result = await self.games_collection.update_one(
+            {"chat_id": chat_id},
+            {"$set": update_data}
+        )
+        return result
+    except (ServerSelectionTimeoutError, ConfigurationError) as e:
+        await self.handle_db_error("update game", chat_id, e)
+        raise  # Re-raise the exception after handling it
+
+    except Exception as e: # Catch any other error
+        logging.error(f"Error in update_game: {e}")
+        raise # Re-raise to be handled in the caller
 
     # Chat management methods
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
