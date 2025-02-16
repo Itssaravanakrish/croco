@@ -52,7 +52,7 @@ async def new_game(client: Client, message: Message, language: Language, game_mo
         return False
 
     await message.reply_text(
-        await get_message(language, "game_started", name=message.from_user.first_name, mode=game_mode),
+        await get_message(language.value, "game_started", name=message.from_user.first_name, mode=game_mode),  # Use language.value
         reply_markup=inline_keyboard_markup
     )
     return True
