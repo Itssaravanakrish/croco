@@ -25,7 +25,14 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-async def new_game(client: Client, message: Message, language: Language, game_mode="easy") -> bool:
+async def new_game(client: Client, message: Message, language: Language) -> bool:  # Removed game_mode parameter
+    try:
+        game_mode = await get_group_game_mode(message.chat.id)  # Get game mode as LIST from DB
+    except Exception as e:
+        logging.error(f"Error getting game mode: {e}")
+        await message.reply_text(await get_message(language, "database_error"))
+        return False
+
     word = choice(game_mode)
 
     bot_info = await client.get_me()
@@ -205,16 +212,15 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
     # Handle the "next" action
     elif callback_query.data == "next":
         try:
-            new_word = choice(game['game_mode'])  # Ensure game['game_mode'] is a list of words
-            update_data = {"$set": {"word": new_word}}  # Correct: Use $set
-            print(f"Update data being sent to db: {update_data}")  # Debug print
-            await db.update_game(chat_id, update_data)  # Update the game with the new word
+            game_mode = await get_group_game_mode(chat_id) # Get the game modes as a LIST
+            new_word = choice(game_mode)  # Use the LIST for choice()
+            update_data = {"$set": {"word": new_word, "game_mode": game_mode}}  # Update with the new word and game mode list
+            print(f"Update data being sent to db: {update_data}")
+            await db.update_game(chat_id, update_data)
 
             await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True)
 
         except Exception as e:
-            logging.exception(f"Error updating word in database: {e}")
-            await callback_query.answer(await get_message(language, "database_error"), show_alert=True)
 
     # Handle the "end_game" action
     elif callback_query.data == "end_game":
