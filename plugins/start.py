@@ -18,7 +18,7 @@ inline_keyboard_markup_pm = InlineKeyboardMarkup(
                 url="https://t.me/Crocodile_game_enBot?startgroup=invite",  # Replace with your bot's invite link
             )
         ],
-        [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/YourSupportGroupLink")],  # Replace with your support group link
+        [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/xTamilChat")],  # Replace with your support group link
         [InlineKeyboardButton("Close ❌", callback_data="close")],
     ]
 )
@@ -42,7 +42,7 @@ async def start_handler(client: Client, message: Message):
         welcome_message = await get_message(language, "welcome")
         await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
-    elif message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]: # Check for all group types
+    elif message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:  # Check for all group types
         print("Start command received in group chat.")
         # Group chat logic
         chat_id = str(message.chat.id)
@@ -68,30 +68,30 @@ async def start_handler(client: Client, message: Message):
             await message.reply_text(await get_message(group_language, "error_during_registration"))
             return
 
-    inline_keyboard_markup_grp = InlineKeyboardMarkup(
-        [
+        inline_keyboard_markup_grp = InlineKeyboardMarkup(
             [
-                InlineKeyboardButton(
-                    "Add Me to Your Group 👥", url="https://t.me/YourBotUsername?startgroup=new"  # Replace with your bot's username
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "Support Our Group 💖", url="https://t.me/YourSupportGroupLink"  # Replace with your support group link
-                )
-            ],
-            [InlineKeyboardButton("Settings ⚙️", callback_data="settings"),  # Settings and Close on the third row
-             InlineKeyboardButton("Close ❌", callback_data="close")],
-        ]
-    )
+                [
+                    InlineKeyboardButton(
+                        "Add Me to Your Group 👥", url="https://t.me/Crocodile_game_enBot?startgroup=new"  # Replace with your bot's username
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Support Our Group 💖", url="https://t.me/Xtamilchat"  # Replace with your support group link
+                    )
+                ],
+                [InlineKeyboardButton("Settings ⚙️", callback_data="settings"),  # Settings and Close on the third row
+                 InlineKeyboardButton("Close ❌", callback_data="close")],
+            ]
+        )
 
-    welcome_message = await get_message(group_language, "welcome")
-        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
+        welcome_message = await get_message(group_language, "welcome")
+        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)  # Correct indentation HERE
+
     else:
         print(f"Start command received in unknown chat type: {message.chat.type}")
         # Handle other chat types if needed. You can log or send a message.
-        await message.reply_text("This command is not supported in this chat type.") # Example
-
+        await message.reply_text("This command is not supported in this chat type.")  # Example
 
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
