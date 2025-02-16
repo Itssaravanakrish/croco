@@ -23,36 +23,50 @@ inline_keyboard_markup_pm = InlineKeyboardMarkup(
     ]
 )
 
-@Client.on_message(filters.group & filters.command("start", CMD))
-async def start_group(client: Client, message: Message):
+@Client.on_message(filters.command("start", CMD))  # Remove filters.group and filters.private
+async def start_handler(client: Client, message: Message):
     user_id = str(message.from_user.id)
     user_data = {
         "first_name": message.from_user.first_name,
         "username": message.from_user.username,
     }
 
-    chat_id = str(message.chat.id)
-    chat_data = {"title": message.chat.title, "type": message.chat.type.name}
-
-    group_language_str = await db.get_chat_language(message.chat.id)
-    try:
-        group_language = Language(group_language_str)  # Convert to enum, handle ValueError
-    except ValueError:
-        group_language = Language.EN  # Default to EN if invalid
-        logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
-
-    try:  # Wrap registration in try...except
+    if message.chat.type == ChatType.PRIVATE:  # Check chat type
+        print("Start command received in private chat.")
+        # Private chat logic
         if not await register_user(user_id, user_data):
-            await message.reply_text(await get_message(group_language, "error_registering_user"))
+            await message.reply_text(await get_message(Language.EN, "error_registering_user"))
             return
 
-        if not await register_chat(chat_id, chat_data):
-            await message.reply_text(await get_message(group_language, "error_registering_chat"))
+        language = Language.EN  # Default language for private chats
+        welcome_message = await get_message(language, "welcome")
+        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
+
+    elif message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]: # Check for all group types
+        print("Start command received in group chat.")
+        # Group chat logic
+        chat_id = str(message.chat.id)
+        chat_data = {"title": message.chat.title, "type": message.chat.type.name}
+
+        group_language_str = await db.get_chat_language(message.chat.id)
+        try:
+            group_language = Language(group_language_str)
+        except ValueError:
+            group_language = Language.EN
+            logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
+
+        try:
+            if not await register_user(user_id, user_data):
+                await message.reply_text(await get_message(group_language, "error_registering_user"))
+                return
+
+            if not await register_chat(chat_id, chat_data):
+                await message.reply_text(await get_message(group_language, "error_registering_chat"))
+                return
+        except Exception as e:
+            logging.error(f"Error during registration: {e}")
+            await message.reply_text(await get_message(group_language, "error_during_registration"))
             return
-    except Exception as e:  # Handle registration errors
-        logging.error(f"Error during registration: {e}")
-        await message.reply_text(await get_message(group_language, "error_during_registration"))  # Generic error message
-        return
 
     inline_keyboard_markup_grp = InlineKeyboardMarkup(
         [
@@ -71,30 +85,12 @@ async def start_group(client: Client, message: Message):
         ]
     )
 
-    welcome_message = await get_message(group_language, "welcome")  # Pass the enum!
-    if not welcome_message:
-        logging.error("The welcome message is empty.")
-        return
-
-    await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
-
-
-@Client.on_message(filters.private & filters.command("start", CMD))
-async def start_private(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    user_data = {
-        "first_name": message.from_user.first_name,
-        "username": message.from_user.username,
-    }
-
-    if not await register_user(user_id, user_data):
-        await message.reply_text(await get_message(Language.EN, "error_registering_user"))  # English fallback
-        return
-
-    language = Language.EN  # Default language for private chats (as enum)
-
-    welcome_message = await get_message(language, "welcome")  # Pass the enum!
-    await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
+    welcome_message = await get_message(group_language, "welcome")
+        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
+    else:
+        print(f"Start command received in unknown chat type: {message.chat.type}")
+        # Handle other chat types if needed. You can log or send a message.
+        await message.reply_text("This command is not supported in this chat type.") # Example
 
 
 @Client.on_callback_query()
