@@ -1,6 +1,5 @@
 import logging
-from typing import Dict, Optional
-from mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError  # Make sure this import is correct
+from typing import Dict, Optional, List  # Import Listfrom mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError  # Make sure this import is correct
 from script import messages, Language  # Import Language enum as well
 from pyrogram import Client
 
