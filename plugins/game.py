@@ -41,18 +41,31 @@ async def new_game(client: Client, message: Message, language: Language, game_mo
             'username': message.from_user.username,
         },
         'word': word,
-        'game_mode': game_mode
+        'game_mode': game_mode,
+        'language': language.value  # Store language as a STRING in the database - KEY CHANGE
     }
 
     try:
         await db.set_game(message.chat.id, game_data)
     except Exception as e:
         logging.error(f"Error setting game in database: {e}")
-        await message.reply_text(await get_message(language, "database_error"))
+        await message.reply_text(await get_message(language.value, "database_error"))  # Use language.value
         return False
 
+    # Retrieve game data and language from the database (if needed elsewhere):
+    retrieved_game_data = await db.get_game(message.chat.id)  # Retrieve game data
+    if retrieved_game_data:  # Check if game data exists
+        retrieved_language_str = retrieved_game_data.get('language')  # Get language string from db
+        try:
+            retrieved_language = Language(retrieved_language_str)  # Convert back to Language enum
+        except ValueError:
+            retrieved_language = Language.EN  # Default if invalid
+            logging.warning(f"Invalid language string '{retrieved_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
+    else:
+        retrieved_language = language # If no game data, use the language passed to the function
+
     await message.reply_text(
-        await get_message(language.value, "game_started", name=message.from_user.first_name, mode=game_mode),  # Use language.value
+        await get_message(retrieved_language.value, "game_started", name=message.from_user.first_name, mode=game_mode),  # Use retrieved_language.value
         reply_markup=inline_keyboard_markup
     )
     return True
