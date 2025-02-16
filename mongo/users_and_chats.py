@@ -1,4 +1,3 @@
-# mongo/users_and_chats.py
 import logging
 from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
@@ -49,20 +48,20 @@ class Database:
     async def add_user(self, user_id: str, user_data: Dict[str, Any]) -> None:
         existing_user = await self.users_collection.find_one({"user_id": user_id})
         if existing_user:
-            logging.info(f"User {user_id} already exists in the database. Skipping addition.")
+            logging.info(f"User  {user_id} already exists in the database. Skipping addition.")
             return
 
         user = {"user_id": user_id, **user_data}
         try:
             await self.users_collection.insert_one(user)
-            logging.info(f"User {user_id} added to the database.")
+            logging.info(f"User  {user_id} added to the database.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add user", user_id, e)
 
     async def get_user(self, user_id: str) -> dict:  # More common type hint
         user = await self.users_collection.find_one({"user_id": user_id})
         if user is None:
-            raise UserNotFoundError(f"User with ID {user_id} not found.")
+            raise UserNotFoundError(f"User  with ID {user_id} not found.")
         return user
 
     # Game management methods
@@ -92,20 +91,19 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("remove game", chat_id, e)
 
-async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> UpdateResult:
-    try:
-        result = await self.games_collection.update_one(
-            {"chat_id": chat_id},
-            {"$set": update_data}
-        )
-        return result
-    except (ServerSelectionTimeoutError, ConfigurationError) as e:
-        await self.handle_db_error("update game", chat_id, e)
-        raise  # Re-raise the exception after handling it
-
-    except Exception as e: # Catch any other error
-        logging.error(f"Error in update_game: {e}")
-        raise # Re-raise to be handled in the caller
+    async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> UpdateResult:
+        try:
+            result = await self.games_collection.update_one(
+                {"chat_id": chat_id},
+                {"$set": update_data}
+            )
+            return result
+        except (ServerSelectionTimeoutError, ConfigurationError) as e:
+            await self.handle_db_error("update game", chat_id, e)
+            raise  # Re-raise the exception after handling it
+        except Exception as e:  # Catch any other error
+            logging.error(f"Error in update_game: {e}")
+            raise  # Re-raise to be handled in the caller
 
     # Chat management methods
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
@@ -127,6 +125,10 @@ async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> Update
             return chat
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("get chat", chat_id, e)
+            return None  # Important: Return None if there's an error
+        except Exception as e:
+            logging.error(f"Error in get_chat: {e}")
+            return None
 
     async def update_chat(self, chat_id: str, chat_title: str) -> None:
         try:
@@ -139,7 +141,7 @@ async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> Update
             await self.handle_db_error("update chat", chat_id, e)
 
     # Group language management methods
-    async def set_chat_language(self, chat_id: str, language: str) -> None:  # Correct Name
+    async def set_chat_language(self, chat_id: str, language: str) -> None:
         try:
             await self.chats_collection.update_one(
                 {"chat_id": chat_id},
@@ -152,12 +154,14 @@ async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> Update
 
     async def get_chat_language(self, chat_id: str) -> str:  # Correct Name
         chat = await self.get_chat(chat_id)
-        return chat.get("language", "en")
+        if chat:  # Check if chat exists before accessing its keys
+            return chat.get("language", "en")
+        else:
+            return "en"  # or handle the case where the chat doesn't exist
 
     # Group game mode management methods
     async def set_group_game_mode(self, chat_id: str, game_mode: str) -> None:
-        try:
-            await self.chats_collection.update_one(
+        try await self.chats_collection.update_one(
                 {"chat_id": chat_id},
                 {"$set": {"game_mode": game_mode}},
                 upsert=True
@@ -168,7 +172,10 @@ async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> Update
 
     async def get_group_game_mode(self, chat_id: str) -> str:
         chat = await self.get_chat(chat_id)
-        return chat.get("game_mode", "easy")
+        if chat:  # Check if chat exists before accessing its keys
+            return chat.get("game_mode", "easy")
+        else:
+            return "easy"  # Handle the case where the chat doesn't exist
 
 # Create a database instance (but don't connect yet)
 db = Database(MONGO_URI, MONGO_DB_NAME)
