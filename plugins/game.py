@@ -113,7 +113,8 @@ async def group_message_handler(client: Client, message: Message):
 
     if message.from_user.id == int(host_id) and message.text:
         if current_word and current_word.lower().strip() in message.text.lower().strip():
-            await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA await message.reply_text(await get_message(language, "dont_tell_answer"))
+            await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA")
+            await message.reply_text(await get_message(language, "dont_tell_answer"))
 
     elif message.from_user.id != int(host_id) and current_word and message.text:
         if current_word.lower().strip() == message.text.lower().strip():
