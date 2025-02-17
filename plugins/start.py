@@ -16,10 +16,10 @@ inline_keyboard_markup_pm = InlineKeyboardMarkup(
         [
             InlineKeyboardButton(
                 "Add Me to Your Group 👥",
-                url="https://t.me/Crocodile_game_enBot?startgroup=true",  # Replace with your bot's username
+                url="https://t.me/Crocodile_game_enBot?startgroup=true",
             )
         ],
-        [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/xTamilChat")],  # Replace with your support group link
+        [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/xTamilChat")],
         [InlineKeyboardButton("Close ❌", callback_data="close")],
     ]
 )
@@ -29,19 +29,18 @@ inline_keyboard_markup_grp = InlineKeyboardMarkup(
     [
         [
             InlineKeyboardButton(
-                "Add Me to Your Group 👥", url="https://t.me/Crocodile_game_enBot?startgroup=true"  # Replace with your bot's username
+                "Add Me to Your Group 👥", url="https://t.me/Crocodile_game_enBot?startgroup=true"
             )
         ],
         [
             InlineKeyboardButton(
-                "Support Our Group 💖", url="https://t.me/Xtamilchat"  # Replace with your support group link
+                "Support Our Group 💖", url="https://t.me/Xtamilchat"
             )
         ],
         [InlineKeyboardButton("Settings ⚙️", callback_data="settings"),
          InlineKeyboardButton("Close ❌", callback_data="close")],
     ]
 )
-
 
 @Client.on_message(filters.command("start", CMD))
 async def start_handler(client: Client, message: Message):
@@ -61,11 +60,11 @@ async def start_handler(client: Client, message: Message):
             welcome_message = await get_message(language, "welcome")
             await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
-        elif message.chat.type in ["group", "supergroup"]:  # Corrected check
+        elif message.chat.type in ["group", "supergroup"]:
             chat_id = str(message.chat.id)
             chat_data = {"title": message.chat.title, "type": message.chat.type.name}
 
-            # 1. Handle BOT ADDED to group (new_chat_members):
+            # Handle BOT ADDED to group (new_chat_members)
             if message.new_chat_members:
                 for new_member in message.new_chat_members:
                     if new_member.id == client.me.id:  # Check if it's the bot
@@ -82,14 +81,14 @@ async def start_handler(client: Client, message: Message):
                                 await message.reply_text(await get_message(group_language, "error_registering_chat"))
                                 return
 
-                            welcome_message = await get_message(group_language, "welcome_new_group")  # New welcome message
+                            welcome_message = await get_message(group_language, "welcome_new_group")
                             await message.reply_text(welcome_message)
                         except Exception as e:
                             logging.exception(f"Error in new_chat_members handler: {e}")
                             await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-                        return  # VERY IMPORTANT: Exit after handling bot added
+                        return  # Exit after handling bot added
 
-            # 2. Handle /start COMMAND in group (regular message):
+            # Handle /start COMMAND in group (regular message)
             group_language = Language.EN  # Default language
             group_language_str = await db.get_chat_language(message.chat.id)
             if group_language_str:
@@ -103,8 +102,8 @@ async def start_handler(client: Client, message: Message):
                     await message.reply_text(await get_message(group_language, "error_registering_user"))
                     return
 
-                welcome_message = await get_message(group_language, "welcome")  # Regular /start welcome message
-                await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)  # Send with markup
+                welcome_message = await get_message(group_language, "welcome")
+                await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
 
             except Exception as e:
                 logging.exception(f"Error in /start command handler: {e}")
@@ -117,7 +116,6 @@ async def start_handler(client: Client, message: Message):
     except Exception as e:
         logging.exception(f"Error in start_handler: {e}")
         await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()  # Acknowledge button press
