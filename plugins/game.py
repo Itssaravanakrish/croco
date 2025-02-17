@@ -3,12 +3,13 @@
 from time import time
 import logging
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Sticker
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from words import choice
 from mongo.users_and_chats import db
 from utils import get_message, is_user_admin
 from script import Language
 
+# Basic logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -25,59 +26,40 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-async def new_game(client: Client, message: Message, language: Language) -> bool:  # Removed game_mode parameter
+async def new_game(client: Client, message: Message, language: Language, game_mode: str) -> bool:
     try:
-        game_mode = await get_group_game_mode(message.chat.id)  # Get game mode as LIST from DB
-    except Exception as e:
-        logging.error(f"Error getting game mode: {e}")
-        await message.reply_text(await get_message(language, "database_error"))
-        return False
+        word = choice(game_mode)  # Get a word based on the game mode
 
-    word = choice(game_mode)
+        bot_info = await client.get_me()
+        bot_id = bot_info.id
 
-    bot_info = await client.get_me()
-    bot_id = bot_info.id
+        host_id = message.from_user.id
+        if host_id == bot_id:
+            return False
 
-    host_id = message.from_user.id
-    if host_id == bot_id:
-        return False
+        game_data = {
+            'start': time(),
+            'host': {
+                'id': host_id,
+                'first_name': message.from_user.first_name,
+                'username': message.from_user.username,
+            },
+            'word': word,
+            'game_mode': game_mode,
+            'language': language.value
+        }
 
-    game_data = {
-        'start': time(),
-        'host': {
-            'id': host_id,
-            'first_name': message.from_user.first_name,
-            'username': message.from_user.username,
-        },
-        'word': word,
-        'game_mode': game_mode,
-        'language': language.value  # Store language as a STRING in the database - KEY CHANGE
-    }
-
-    try:
         await db.set_game(message.chat.id, game_data)
+
+        await message.reply_text(
+            await get_message(language.value, "game_started", name=message.from_user.first_name, mode=game_mode, lang=language.value),
+            reply_markup=inline_keyboard_markup
+        )
+        return True
     except Exception as e:
-        logging.error(f"Error setting game in database: {e}")
-        await message.reply_text(await get_message(language.value, "database_error"))  # Use language.value
+        logging.error(f"Error in new_game: {e}")
+        await message.reply_text(await get_message(language.value, "database_error"))
         return False
-
-    # Retrieve game data and language from the database (if needed elsewhere):
-    retrieved_game_data = await db.get_game(message.chat.id)  # Retrieve game data
-    if retrieved_game_data:  # Check if game data exists
-        retrieved_language_str = retrieved_game_data.get('language')  # Get language string from db
-        try:
-            retrieved_language = Language(retrieved_language_str)  # Convert back to Language enum
-        except ValueError:
-            retrieved_language = Language.EN  # Default if invalid
-            logging.warning(f"Invalid language string '{retrieved_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
-    else:
-        retrieved_language = language # If no game data, use the language passed to the function
-
-    await message.reply_text(
-        await get_message(retrieved_language.value, "game_started", name=message.from_user.first_name, mode=game_mode, lang=retrieved_language.value),  # Pass retrieved_language.value as lang
-        reply_markup=inline_keyboard_markup
-    )
-    return True
 
 @Client.on_message(filters.group & filters.command("game", CMD))
 async def game_command(client: Client, message: Message):
@@ -87,7 +69,6 @@ async def game_command(client: Client, message: Message):
         language = Language(language_str)
     except ValueError:
         language = Language.EN
-    game_mode = await db.get_group_game_mode(chat_id)
 
     try:
         ongoing_game = await db.get_game(chat_id)
@@ -100,7 +81,8 @@ async def game_command(client: Client, message: Message):
         time_elapsed = time() - ongoing_game['start']
         if time_elapsed >= GAME_TIMEOUT:
             await handle_end_game(client, message, language)
-            await new_game(client, message, language, game_mode)
+            game_mode = await db.get_group_game_mode(chat_id)  # Get the game mode
+            await new_game(client, message, language, game_mode)  # Pass game_mode
             return
 
         host_id = ongoing_game["host"]["id"]
@@ -108,7 +90,8 @@ async def game_command(client: Client, message: Message):
             await message.reply_text(await get_message(language, "game_already_started"))
             return
 
-    await new_game(client, message, language, game_mode)
+    game_mode = await db.get_group_game_mode(chat_id)  # Get the game mode
+    await new_game(client, message, language, game_mode)  # Pass game_mode
 
 @Client.on_message(filters.group)
 async def group_message_handler(client: Client, message: Message):
@@ -128,20 +111,12 @@ async def group_message_handler(client: Client, message: Message):
     host_id = game.get("host", {}).get("id")
     current_word = game.get("word")
 
-    # Debug print statements:
-    print(f"Current Word: {current_word}")
-    print(f"Message Text: {message.text}")
-    if message.text:  # Check if message.text exists before lower() and strip()
-      print(f"Lowercase Current Word: {current_word.lower().strip() if current_word else None}") # handle current_word being None
-      print(f"Lowercase Message Text: {message.text.lower().strip()}")
-
     if message.from_user.id == int(host_id) and message.text:
-        if current_word and current_word.lower().strip() in message.text.lower().strip():  # Host guess check (case-insensitive, whitespace-stripped)
-            await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA")
-            await message.reply_text(await get_message(language, "dont_tell_answer"))
+        if current_word and current_word.lower().strip() in message.text.lower().strip():
+            await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA await message.reply_text(await get_message(language, "dont_tell_answer"))
 
     elif message.from_user.id != int(host_id) and current_word and message.text:
-        if current_word.lower().strip() == message.text.lower().strip():  # Player guess check (case-insensitive, whitespace-stripped)
+        if current_word.lower().strip() == message.text.lower().strip():
             winner_id = message.from_user.id
             winner_name = message.from_user.first_name
 
@@ -161,10 +136,10 @@ async def group_message_handler(client: Client, message: Message):
                 await message.reply_text(await get_message(language, "database_error"))
                 return
 
-            # Announce the new game and new host in the GROUP chat using the existing "game_started" message:
-            new_game_message = await get_message(language, "game_started", name=winner_name, mode=game.get("game_mode"), lang=language.value)  # All placeholders filled
-
-            await message.reply_text(new_game_message)
+            await message.reply_text(
+                await get_message(language, "new_game_started", name=winner_name, word=new_word),
+                reply_markup=inline_keyboard_markup
+            )
 
 @Client.on_callback_query(filters.regex("view|next|end_game"))
 async def game_action_callback(client: Client, callback_query: CallbackQuery):
@@ -212,17 +187,16 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
     # Handle the "next" action
     elif callback_query.data == "next":
         try:
-            game_mode = await get_group_game_mode(chat_id) # Get the game modes as a LIST
+            game_mode = await db.get_group_game_mode(chat_id)  # Get the game modes as a LIST
             new_word = choice(game_mode)  # Use the LIST for choice()
-            update_data = {"$set": {"word": new_word, "game_mode": game_mode}}  # Update with the new word and game mode list
-            print(f"Update data being sent to db: {update_data}")
+            update_data = {"$set": {"word": new_word}}  # Update with the new word
             await db.update_game(chat_id, update_data)
 
             await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True)
 
         except Exception as e:
-            logging.exception(f"Error updating word in database: {e}")  # Indented!
-            await callback_query.answer(await get_message(language, "database_error"), show_alert=True)  # Indented!
+            logging.exception(f"Error updating word in database: {e}")
+            await callback_query.answer(await get_message(language, "database_error"), show_alert=True)
 
     # Handle the "end_game" action
     elif callback_query.data == "end_game":
@@ -257,14 +231,12 @@ async def set_game_mode(client: Client, message: Message):
     except Exception as e:
         logging.error(f"Error setting game mode in database: {e}")
         await message.reply_text(await get_message(language, "database_error"))
-        return
 
 
-async def handle_end_game(client: Client, message: Message, language: Language):  # Language as enum
+async def handle_end_game(client: Client, message: Message, language: Language):
     try:
         await db.remove_game(message.chat.id)
         await message.reply_text(await get_message(language, "game_ended"))  # Use enum
     except Exception as e:
         logging.error(f"Error removing game from database: {e}")
         await message.reply_text(await get_message(language, "database_error"))  # Use enum
-        return
