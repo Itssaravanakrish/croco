@@ -42,13 +42,66 @@ inline_keyboard_markup_grp = InlineKeyboardMarkup(
     ]
 )
 
-from pyrogram import Client, filters
-from pyrogram.types import Message
-from mongo.users_and_chats import db
-from utils import get_message, register_user, register_chat
-from script import Language
-import logging
+async def handle_start_command(client: Client, message: Message, is_group: bool):
+    user_id = str(message.from_user.id)
+    user_data = {
+        "first_name": message.from_user.first_name,
+        "username": message.from_user.username,
+    }
 
+    try:
+        if is_group:
+            chat_id = str(message.chat.id)
+            group_language = await get_chat_language(chat_id)
+            logging.info(f"/start command received in group chat {chat_id} from user {user_id}.")
+        else:
+            group_language = Language.EN  # Default language for private chats
+            logging.info(f"/start command received in private chat from user {user_id}.")
+
+        # Register user
+        if not await register_user(user_id, user_data):
+            await message.reply_text(await get_message(group_language, "error_registering_user"))
+            return
+
+        # Send welcome message
+        welcome_message_key = "welcome_new_group" if is_group else "welcome"
+        welcome_message = await get_message(group_language, welcome_message_key)
+        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp if is_group else inline_keyboard_markup_pm)
+
+    except Exception as e:
+        logging.exception(f"Error in handle_start_command: {e}")
+        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+
+# Command handler for /start in private messages
+@Client.on_message(filters.command("start") & filters.private)
+async def start_private_handler(client: Client, message: Message):
+    await handle_start_command(client, message, is_group=False)
+
+# Command handler for /start in group chats
+@Client.on_message(filters.command("start") & filters.group)
+async def start_group_handler(client: Client, message: Message):
+    # Handle BOT ADDED to group (new_chat_members)
+    if message.new_chat_members:
+        for new_member in message.new_chat_members:
+            if new_member.id == client.me.id:  # Check if it's the bot
+                chat_id = str(message.chat.id)
+                chat_data = {"title": message.chat.title, "type": message.chat.type.name}
+                group_language = await get_chat_language(chat_id)
+                try:
+                    if not await register_chat(chat_id, chat_data):
+                        await message.reply_text(await get_message(group_language, "error_registering_chat"))
+                        return
+
+                    welcome_message = await get_message(group_language, "welcome_new_group")
+                    await message.reply_text(welcome_message)
+                except Exception as e:
+                    logging.exception(f"Error in new_chat_members handler: {e}")
+                    await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+                return  # Exit after handling bot added
+
+    # Handle /start COMMAND in group (regular message)
+    await handle_start_command(client, message, is_group=True)
+    
 # Command handler for /start in private messages
 @Client.on_message(filters.command("start") & filters.private)
 async def start_private_handler(client: Client, message: Message):
@@ -72,51 +125,6 @@ async def start_private_handler(client: Client, message: Message):
         logging.exception(f"Error in start_private_handler: {e}")
         await message.reply_text(await get_message(Language.EN, "error_processing_command"))
 
-# Command handler for /start in group chats
-@Client.on_message(filters.command("start") & filters.group)
-async def start_group_handler(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    user_data = {
-        "first_name": message.from_user.first_name,
-        "username": message.from_user.username,
-    }
-
-    try:
-        logging.info(f"/start command received in group chat {message.chat.id} from user {user_id}.")
-        chat_id = str(message.chat.id)
-        chat_data = {"title": message.chat.title, "type": message.chat.type.name}
-
-        # Handle BOT ADDED to group (new_chat_members)
-        if message.new_chat_members:
-            for new_member in message.new_chat_members:
-                if new_member.id == client.me.id:  # Check if it's the bot
-                    group_language = await get_chat_language(chat_id)
-                    try:
-                        if not await register_chat(chat_id, chat_data):
-                            await message.reply_text(await get_message(group_language, "error_registering_chat"))
-                            return
-
-                        welcome_message = await get_message(group_language, "welcome_new_group")
-                        await message.reply_text(welcome_message)
-                    except Exception as e:
-                        logging.exception(f"Error in new_chat_members handler: {e}")
-                        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-                    return  # Exit after handling bot added
-
-        # Handle /start COMMAND in group (regular message)
-        group_language = await get_chat_language(chat_id)
-
-        if not await register_user(user_id, user_data):  # Register user if needed
-            await message.reply_text(await get_message(group_language, "error_registering_user"))
-            return
-
-        welcome_message = await get_message(group_language, "welcome")
-        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
-
-    except Exception as e:
-        logging.exception(f"Error in start_group_handler: {e}")
-        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-        
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()  # Acknowledge button press
