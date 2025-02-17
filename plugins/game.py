@@ -26,6 +26,27 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
+async def start_new_round(client: Client, chat_id: int, winner_id: int, winner_name: str, game_mode: str):
+    new_word = choice(game_mode)
+    new_game_data = {
+        'start': time(),
+        'host': {'id': str(winner_id), 'first_name': winner_name, 'username': message.from_user.username},
+        'word': new_word,
+        'game_mode': game_mode
+    }
+    try:
+        await db.set_game(chat_id, new_game_data)
+        logging.info(f"New game started for chat {chat_id} with host {winner_name} and word '{new_word}'.")
+    except Exception as e:
+        logging.error(f"Error setting game in database: {e}")
+        await message.reply_text(await get_message(language, "database_error"))
+        return
+
+    await message.reply_text(
+        await get_message(language, "new_game_started", name=winner_name, word=new_word),
+        reply_markup=inline_keyboard_markup  # Ensure this is defined elsewhere
+    )
+    
 async def new_game(client: Client, message: Message, language: Language, game_mode: str) -> bool:
     try:
         # Ensure game_mode is a string, if it's a list, take the first element
@@ -65,6 +86,27 @@ async def new_game(client: Client, message: Message, language: Language, game_mo
         await message.reply_text(await get_message(language.value, "database_error"))
         return False
 
+async def check_answer(client: Client, message: Message, game: dict, language: Language):
+    current_word = game.get("word")
+    host_id = game.get("host", {}).get("id")
+
+    if message.from_user.id == int(host_id) and message.text:
+        # Host is trying to guess the word
+        if current_word and current_word.lower().strip() in message.text.lower().strip():
+            await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA")
+            await message.reply_text(await get_message(language, "dont_tell_answer"))
+
+    elif message.from_user.id != int(host_id) and current_word and message.text:
+        # Check if the player's answer matches the current word
+        if current_word.lower().strip() == message.text.lower().strip():
+            winner_id = message.from_user.id
+            winner_name = message.from_user.first_name
+
+            await message.reply_text(await get_message(language, "correct_answer", winner=winner_name))
+
+            # Call the start_new_round function to handle the new round
+            await start_new_round(client, message.chat.id, winner_id, winner_name, game.get("game_mode"))
+
 @Client.on_message(filters.group & filters.command("game", CMD))
 async def game_command(client: Client, message: Message):
     chat_id = message.chat.id
@@ -101,50 +143,21 @@ async def game_command(client: Client, message: Message):
 async def group_message_handler(client: Client, message: Message):
     chat_id = message.chat.id
     language_str = await db.get_chat_language(chat_id)
+    
     try:
         language = Language(language_str)
     except ValueError:
         language = Language.EN
-        logging.warning(f"Invalid language string '{language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
+        logging.warning(f"Invalid language string '{language_str}' in database for chat {chat_id}. Defaulting to EN.")
 
+    # Retrieve the current game state
     game = await db.get_game(chat_id)
 
     if not game:
-        return
+        return  # No game ongoing, exit the function
 
-    host_id = game.get("host", {}).get("id")
-    current_word = game.get("word")
-
-    if message.from_user.id == int(host_id) and message.text:
-        if current_word and current_word.lower().strip() in message.text.lower().strip():
-            await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA")
-            await message.reply_text(await get_message(language, "dont_tell_answer"))
-
-    elif message.from_user.id != int(host_id) and current_word and message.text:
-        if current_word.lower().strip() == message.text.lower().strip():
-            winner_id = message.from_user.id
-            winner_name = message.from_user.first_name
-
-            await message.reply_text(await get_message(language, "correct_answer", winner=winner_name))
-
-            new_word = choice(game.get("game_mode"))
-            new_game_data = {
-                'start': time(),
-                'host': {'id': str(winner_id), 'first_name': winner_name, 'username': message.from_user.username},
-                'word': new_word,
-                'game_mode': game.get("game_mode")
-            }
-            try:
-                await db.set_game(chat_id, new_game_data)
-            except Exception as e:
-                logging.error(f"Error setting game in database: {e}")
-                await message.reply_text(await get_message(language, "database_error"))
-                return
-
-            await message.reply_text(
-                await get_message(language, "new_game_started", name=winner_name, word=new_word),
-                reply_markup=inline_keyboard_markup
-            )
+    # Call the check_answer function to handle answer checking
+    await check_answer(client, message, game, language)
 
 @Client.on_callback_query(filters.regex("view|next|end_game"))
 async def game_action_callback(client: Client, callback_query: CallbackQuery):
@@ -193,10 +206,14 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
     elif callback_query.data == "next":
         try:
             game_mode = await db.get_group_game_mode(chat_id)  # Get the game modes as a LIST
-            if isinstance(game_mode, list):
+            if isinstance(game_mode, list) and game_mode:
                 game_mode = game_mode[0]  # Use the first mode if it's a list
+            else:
+                logging.warning(f"No valid game mode found for chat_id: {chat_id}. Defaulting to 'easy'.")
+                game_mode = "easy"  # Default to "easy" if no valid mode is found
+                
             new_word = choice(game_mode)  # Use the string for choice()
-            update_data = {"$set": {"word": new_word}}  # Update with the new word
+            update_data = {"word": new_word}  # Prepare the update data
             await db.update_game(chat_id, update_data)
 
             await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True)
@@ -211,7 +228,6 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
         await callback_query.message.delete()
         await client.send_message(chat_id, await get_message(language, "game_ended"))
         await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
-
 
 @Client.on_message(filters.group & filters.command("set_mode", CMD))
 async def set_game_mode(client: Client, message: Message):
