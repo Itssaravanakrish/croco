@@ -42,8 +42,16 @@ inline_keyboard_markup_grp = InlineKeyboardMarkup(
     ]
 )
 
-@Client.on_message(filters.command("start", CMD))
-async def start_handler(client: Client, message: Message):
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from mongo.users_and_chats import db
+from utils import get_message, register_user, register_chat
+from script import Language
+import logging
+
+# Command handler for /start in private messages
+@Client.on_message(filters.command("start") & filters.private)
+async def start_private_handler(client: Client, message: Message):
     user_id = str(message.from_user.id)
     user_data = {
         "first_name": message.from_user.first_name,
@@ -51,71 +59,64 @@ async def start_handler(client: Client, message: Message):
     }
 
     try:
-        if message.chat.type == "private":
-            if not await register_user(user_id, user_data):
-                await message.reply_text(await get_message(Language.EN, "error_registering_user"))
-                return
+        logging.info(f"/start command received in private chat from user {user_id}.")
+        if not await register_user(user_id, user_data):
+            await message.reply_text(await get_message(Language.EN, "error_registering_user"))
+            return
 
-            language = Language.EN  # Default language for private chats
-            welcome_message = await get_message(language, "welcome")
-            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
-
-        elif message.chat.type in ["group", "supergroup"]:
-            chat_id = str(message.chat.id)
-            chat_data = {"title": message.chat.title, "type": message.chat.type.name}
-
-            # Handle BOT ADDED to group (new_chat_members)
-            if message.new_chat_members:
-                for new_member in message.new_chat_members:
-                    if new_member.id == client.me.id:  # Check if it's the bot
-                        group_language = Language.EN  # Default language
-                        group_language_str = await db.get_chat_language(message.chat.id)
-                        if group_language_str:
-                            try:
-                                group_language = Language(group_language_str)
-                            except ValueError:
-                                logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
-
-                        try:
-                            if not await register_chat(chat_id, chat_data):
-                                await message.reply_text(await get_message(group_language, "error_registering_chat"))
-                                return
-
-                            welcome_message = await get_message(group_language, "welcome_new_group")
-                            await message.reply_text(welcome_message)
-                        except Exception as e:
-                            logging.exception(f"Error in new_chat_members handler: {e}")
-                            await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-                        return  # Exit after handling bot added
-
-            # Handle /start COMMAND in group (regular message)
-            group_language = Language.EN  # Default language
-            group_language_str = await db.get_chat_language(message.chat.id)
-            if group_language_str:
-                try:
-                    group_language = Language(group_language_str)
-                except ValueError:
-                    logging.warning(f"Invalid language string '{group_language_str}' in database for chat {message.chat.id}. Defaulting to EN.")
-
-            try:
-                if not await register_user(user_id, user_data):  # Register user if needed
-                    await message.reply_text(await get_message(group_language, "error_registering_user"))
-                    return
-
-                welcome_message = await get_message(group_language, "welcome")
-                await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
-
-            except Exception as e:
-                logging.exception(f"Error in /start command handler: {e}")
-                await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-
-        else:
-            logging.warning(f"Start command received in unknown chat type: {message.chat.type}")
-            await message.reply_text("This command is not supported in this chat type.")
+        language = Language.EN  # Default language for private chats
+        welcome_message = await get_message(language, "welcome")
+        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
     except Exception as e:
-        logging.exception(f"Error in start_handler: {e}")
+        logging.exception(f"Error in start_private_handler: {e}")
         await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+
+# Command handler for /start in group chats
+@Client.on_message(filters.command("start") & filters.group)
+async def start_group_handler(client: Client, message: Message):
+    user_id = str(message.from_user.id)
+    user_data = {
+        "first_name": message.from_user.first_name,
+        "username": message.from_user.username,
+    }
+
+    try:
+        logging.info(f"/start command received in group chat {message.chat.id} from user {user_id}.")
+        chat_id = str(message.chat.id)
+        chat_data = {"title": message.chat.title, "type": message.chat.type.name}
+
+        # Handle BOT ADDED to group (new_chat_members)
+        if message.new_chat_members:
+            for new_member in message.new_chat_members:
+                if new_member.id == client.me.id:  # Check if it's the bot
+                    group_language = await get_chat_language(chat_id)
+                    try:
+                        if not await register_chat(chat_id, chat_data):
+                            await message.reply_text(await get_message(group_language, "error_registering_chat"))
+                            return
+
+                        welcome_message = await get_message(group_language, "welcome_new_group")
+                        await message.reply_text(welcome_message)
+                    except Exception as e:
+                        logging.exception(f"Error in new_chat_members handler: {e}")
+                        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+                    return  # Exit after handling bot added
+
+        # Handle /start COMMAND in group (regular message)
+        group_language = await get_chat_language(chat_id)
+
+        if not await register_user(user_id, user_data):  # Register user if needed
+            await message.reply_text(await get_message(group_language, "error_registering_user"))
+            return
+
+        welcome_message = await get_message(group_language, "welcome")
+        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
+
+    except Exception as e:
+        logging.exception(f"Error in start_group_handler: {e}")
+        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+        
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()  # Acknowledge button press
