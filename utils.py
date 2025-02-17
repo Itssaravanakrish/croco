@@ -96,3 +96,28 @@ async def get_group_game_mode(chat_id: str) -> List[str]:  # Returns a LIST
         logging.error(f"Failed to get group game mode for chat {chat_id}: {e}")
         logging.warning(f"Error getting game mode for {chat_id}. Defaulting to ['easy'].")
         return ["easy"]  # Default to a LIST
+from mongo.users_and_chats import db
+
+async def update_user_score(chat_id, user_id, base_score=0, coins=0, xp=0):
+    """
+    Update the user's score, coins, and XP in the database.
+    
+    :param chat_id: The ID of the chat.
+    :param user_id: The ID of the user.
+    :param base_score: The score to add to the user's current score.
+    :param coins: The number of coins to add to the user's current coins.
+    :param xp: The amount of XP to add to the user's current XP.
+    """
+    # Fetch the current user data
+    user_data = await db.get_user_score(chat_id, user_id)
+
+    if user_data:
+        # Update existing user's score, coins, and XP
+        new_score = user_data['score'] + base_score
+        new_coins = user_data['coins'] + coins
+        new_xp = user_data['xp'] + xp
+
+        await db.update_user_score(chat_id, user_id, new_score, new_coins, new_xp)
+    else:
+        # Create a new user entry if not exists
+        await db.set_user_score(chat_id, user_id, base_score, coins, xp)
