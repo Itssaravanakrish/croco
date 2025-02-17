@@ -152,6 +152,60 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("update chat", chat_id, e)
 
+    # User score management methods
+    async def add_user_score(self, chat_id: str, user_id: str, score: int, coins: int, xp: int) -> None:
+        """Add a new user score entry to the database."""
+        user_score = {
+            "chat_id": chat_id,
+            "user_id": user_id,
+            "score": score,
+            "coins": coins,
+            "xp": xp
+        }
+        try:
+            await self.users_collection.insert_one(user_score)
+            logging.info(f"User  {user_id} score added to chat {chat_id}.")
+        except (ServerSelectionTimeoutError, ConfigurationError) as e:
+            await self.handle_db_error("add user score", user_id, e)
+
+    async def get_user_score(self, chat_id: str, user_id: str) -> Optional[dict]:
+        """Retrieve a user's score, coins, and XP from the database."""
+        user_score = await self.users_collection.find_one({"chat_id": chat_id, "user_id": user_id})
+        if user_score is None:
+            raise UserNotFoundError(f"User  {user_id} not found in chat {chat_id}.")
+        return user_score
+
+    async def update_user_score(self, chat_id: str, user_id: str, score: int, coins: int, xp: int) -> None:
+        """Update the user's score, coins, and XP in the database."""
+        try:
+            await self.users_collection.update_one(
+                {"chat_id": chat_id, "user_id": user_id},
+                {"$set": {
+                    "score": score,
+                    "coins": coins,
+                    "xp": xp
+                }},
+                upsert=True  # Create a new entry if it doesn't exist
+            )
+            logging.info(f"User  {user_id} score updated in chat {chat_id}.")
+        except (ServerSelectionTimeoutError, ConfigurationError) as e:
+            await self.handle_db_error("update user score", user_id, e)
+
+    async def increment_user_score(self, chat_id: str, user_id: str, score: int, coins: int, xp: int) -> None:
+        """Increment the user's score, coins, and XP in the database."""
+        user_score = await self.get_user_score(chat_id, user_id)
+
+        new_score = user_score['score'] + score
+        new_coins = user_score['coins'] + coins
+        new_xp = user_score['xp'] + xp
+
+        await self.update_user_score(chat_id, user_id, new_score, new_coins, new_xp)
+
+    async def get_top_users(self, chat_id: str, limit: int = 10) -> List[dict]:
+        """Retrieve the top users based on their scores in a specific chat."""
+        top_users = await self.users_collection.find({"chat_id": chat_id}).sort("score", -1).limit(limit).to_list()
+        return top_users
+        
     # Group language management methods
     async def set_chat_language(self, chat_id: str, language: str) -> None:
         """Set the language for a specific chat."""
