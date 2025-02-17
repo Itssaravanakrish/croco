@@ -1,4 +1,3 @@
-# words.py
 import logging
 from random import choice as choice_
 from pathlib import Path
@@ -59,3 +58,7 @@ def choice(game_mode: str) -> str:
         return "No words available"  # Or another default message
 
     return choice_(word_list)
+
+def get_word_list(game_mode: str):
+    """Return a list of words based on the specified game mode."""
+    return word_lists.get(game_mode.lower(), word_lists["easy"])  # Default to easy if mode is invalid
