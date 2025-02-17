@@ -1,5 +1,5 @@
 import logging
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatType, ChatMemberUpdated, ChatMembersAdded
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatMemberUpdated, ChatMembersAdded  # Correct import for pyrogram types
 from pyrogram import Client, filters
 from mongo.users_and_chats import db  # Replace with your actual module path
 from utils import get_message, register_user, register_chat, is_user_admin  # Replace with your actual module path
@@ -52,7 +52,7 @@ async def start_handler(client: Client, message: Message):
     }
 
     try:
-        if message.chat.type == ChatType.PRIVATE:
+        if message.chat.type == "private":
             if not await register_user(user_id, user_data):
                 await message.reply_text(await get_message(Language.EN, "error_registering_user"))
                 return
@@ -61,7 +61,7 @@ async def start_handler(client: Client, message: Message):
             welcome_message = await get_message(language, "welcome")
             await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
-        elif message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        elif message.chat.type in ["group", "supergroup"]:  # Corrected check
             chat_id = str(message.chat.id)
             chat_data = {"title": message.chat.title, "type": message.chat.type.name}
 
