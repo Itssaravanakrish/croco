@@ -221,6 +221,8 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
             await callback_query.answer(await get_message(language, "new_word", word=new_word), show_alert=True)
 
         except Exception as e:
+            logging.exception(f"Error updating word in database: {e}")  # Indented!
+            await callback_query.answer(await get_message(language, "database_error"), show_alert=True)  # Indented!
 
     # Handle the "end_game" action
     elif callback_query.data == "end_game":
