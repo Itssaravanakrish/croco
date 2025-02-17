@@ -28,6 +28,10 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 
 async def new_game(client: Client, message: Message, language: Language, game_mode: str) -> bool:
     try:
+        # Ensure game_mode is a string, if it's a list, take the first element
+        if isinstance(game_mode, list):
+            game_mode = game_mode[0]  # or handle it according to your logic
+
         word = choice(game_mode)  # Get a word based on the game mode
 
         bot_info = await client.get_me()
