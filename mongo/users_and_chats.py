@@ -195,4 +195,4 @@ class Database:
             return ["easy"]  # Return a LIST
 
 # Create a database instance (but don't connect yet)
-db = Database(MONGO_URI
+db = Database(MONGO_URI, MONGO_DB_NAME)
