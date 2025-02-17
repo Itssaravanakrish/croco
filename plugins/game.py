@@ -6,7 +6,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from words import choice
 from mongo.users_and_chats import db
-from utils import get_message, is_user_admin
+from utils import get_message, is_user_admin, update_user_score
 from script import Language
 
 # Basic logging configuration
@@ -69,6 +69,8 @@ async def new_game(client: Client, message: Message, language: Language, game_mo
 async def check_answer(client: Client, message: Message, game: dict, language: Language):
     current_word = game.get("word")
     host_id = game.get("host", {}).get("id")
+    chat_id = message.chat.id  # Get the chat ID
+    user_id = message.from_user.id  # Get the user ID
 
     if message.text:  # Check if the message is a text message
         if message.text.lower() == current_word.lower():  # Direct comparison
@@ -80,9 +82,14 @@ async def check_answer(client: Client, message: Message, game: dict, language: L
                 await message.reply_text(await get_message(language, "dont_tell_answer"))  # Use the text from your script
             else:  # Non-host provided the answer
                 await handle_end_game(client, message, language)  # End the current game
+                
+                # Update the user's score, coins, and XP
+                await update_user_score(chat_id, user_id, base_score=10, coins=5, xp=20)
+                
                 await message.reply_text(
                     await get_message(language, "correct_answer", winner=winner_name)  # Use the correct answer text
                 )
+                
                 await new_game(client, message, language, game.get("game_mode"))  # Start a new game
                 # The new_game function will handle sending the "game started" message
 
