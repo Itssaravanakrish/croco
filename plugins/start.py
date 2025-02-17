@@ -1,5 +1,5 @@
 import logging
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatMemberUpdated, ChatMembersAdded  # Correct import for pyrogram types
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatMemberUpdated  # Correct import for pyrogram types
 from pyrogram import Client, filters
 from mongo.users_and_chats import db  # Replace with your actual module path
 from utils import get_message, register_user, register_chat, is_user_admin  # Replace with your actual module path
