@@ -26,27 +26,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-async def start_new_round(client: Client, chat_id: int, winner_id: int, winner_name: str, game_mode: str):
-    new_word = choice(game_mode)
-    new_game_data = {
-        'start': time(),
-        'host': {'id': str(winner_id), 'first_name': winner_name, 'username': message.from_user.username},
-        'word': new_word,
-        'game_mode': game_mode
-    }
-    try:
-        await db.set_game(chat_id, new_game_data)
-        logging.info(f"New game started for chat {chat_id} with host {winner_name} and word '{new_word}'.")
-    except Exception as e:
-        logging.error(f"Error setting game in database: {e}")
-        await message.reply_text(await get_message(language, "database_error"))
-        return
-
-    await message.reply_text(
-        await get_message(language, "new_game_started", name=winner_name, word=new_word),
-        reply_markup=inline_keyboard_markup  # Ensure this is defined elsewhere
-    )
-    
+  
 async def new_game(client: Client, message: Message, language: Language, game_mode: str) -> bool:
     try:
         # Ensure game_mode is a string, if it's a list, take the first element
@@ -90,22 +70,21 @@ async def check_answer(client: Client, message: Message, game: dict, language: L
     current_word = game.get("word")
     host_id = game.get("host", {}).get("id")
 
-    if message.from_user.id == int(host_id) and message.text:
-        # Host is trying to guess the word
-        if current_word and current_word.lower().strip() in message.text.lower().strip():
-            await message.reply_sticker("CAACAgEAAx0CdytmQADK4wABb7Jj6h5w-f9p5l7k8l4AAj8MAAL58lVDKF-qY-F5j7AeBA")
-            await message.reply_text(await get_message(language, "dont_tell_answer"))
-
-    elif message.from_user.id != int(host_id) and current_word and message.text:
-        # Check if the player's answer matches the current word
-        if current_word.lower().strip() == message.text.lower().strip():
+    if message.text:  # Check if the message is a text message
+        if message.text.lower() == current_word.lower():  # Direct comparison
             winner_id = message.from_user.id
             winner_name = message.from_user.first_name
 
-            await message.reply_text(await get_message(language, "correct_answer", winner=winner_name))
-
-            # Call the start_new_round function to handle the new round
-            await start_new_round(client, message.chat.id, winner_id, winner_name, game.get("game_mode"))
+            if winner_id == int(host_id):  # Host provided the answer
+                await message.reply_sticker("CAACAgUAAyEFAASMPZdPAAEBWjVnnj1fEKVElmmYXzBc828kgDZTQQACNBQAAu9OkFSKgGFg2iVa2R4E")
+                await message.reply_text(await get_message(language, "dont_tell_answer"))  # Use the text from your script
+            else:  # Non-host provided the answer
+                await handle_end_game(client, message, language)  # End the current game
+                await message.reply_text(
+                    await get_message(language, "correct_answer", winner=winner_name)  # Use the correct answer text
+                )
+                await new_game(client, message, language, game.get("game_mode"))  # Start a new game
+                # The new_game function will handle sending the "game started" message
 
 @Client.on_message(filters.group & filters.command("game", CMD))
 async def game_command(client: Client, message: Message):
@@ -255,11 +234,40 @@ async def set_game_mode(client: Client, message: Message):
         logging.error(f"Error setting game mode in database: {e}")
         await message.reply_text(await get_message(language, "database_error"))
 
+@Client.on_callback_query(filters.regex("choose_leader"))
+async def choose_leader_callback(client: Client, callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    chat_id = callback_query.message.chat.id
+
+    # Get the language for the chat
+    language_str = await db.get_chat_language(chat_id)
+    try:
+        language = Language(language_str)
+    except ValueError:
+        language = Language.EN
+
+    # Get the game mode for the new game
+    game_mode = await db.get_group_game_mode(chat_id)  # Get the game mode
+
+    # Start a new game with the user who clicked the button as the leader
+    await new_game(client, callback_query.message, language, game_mode)  # Pass game_mode
+
+    await callback_query.answer(f"{callback_query.from_user.first_name} is now the leader! Starting the game...")
 
 async def handle_end_game(client: Client, message: Message, language: Language):
     try:
         await db.remove_game(message.chat.id)
-        await message.reply_text(await get_message(language, "game_ended"))  # Use enum
+        
+        # Create an inline keyboard with a button to choose a new leader
+        inline_keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("I Want To Be A Leader 🙋‍♂️", callback_data="choose_leader")]]
+        )
+        
+        # Use get_message to retrieve the translation for "choose_leader"
+        await message.reply_text(
+            await get_message(language, "choose_leader"),  # Retrieve the message in the correct language
+            reply_markup=inline_keyboard
+        )
     except Exception as e:
         logging.error(f"Error removing game from database: {e}")
         await message.reply_text(await get_message(language, "database_error"))  # Use enum
