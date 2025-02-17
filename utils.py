@@ -98,26 +98,27 @@ async def get_group_game_mode(chat_id: str) -> List[str]:  # Returns a LIST
         return ["easy"]  # Default to a LIST
 from mongo.users_and_chats import db
 
-async def update_user_score(chat_id, user_id, base_score=0, coins=0, xp=0):
-    """
-    Update the user's score, coins, and XP in the database.
-    
-    :param chat_id: The ID of the chat.
-    :param user_id: The ID of the user.
-    :param base_score: The score to add to the user's current score.
-    :param coins: The number of coins to add to the user's current coins.
-    :param xp: The amount of XP to add to the user's current XP.
-    """
-    # Fetch the current user data
-    user_data = await db.get_user_score(chat_id, user_id)
+async def update_user_score(chat_id: str, user_id: str, base_score: int, coins: int, xp: int):
+    try:
+        # Check if the user exists in the chat
+        user_data = await db.get_user_score(chat_id, user_id)
+        
+        # If user_data is None, handle the case where the user is not found
+        if user_data is None:
+            logging.warning(f"User  {user_id} not found in chat {chat_id}. Registering user.")
+            await db.register_user(chat_id, user_id)  # Register the user if not found
+            user_data = await db.get_user_score(chat_id, user_id)  # Retrieve the user data again
 
-    if user_data:
-        # Update existing user's score, coins, and XP
-        new_score = user_data['score'] + base_score
-        new_coins = user_data['coins'] + coins
-        new_xp = user_data['xp'] + xp
+        # Update the user's score, coins, and XP
+        user_data['score'] += base_score
+        user_data['coins'] += coins
+        user_data['xp'] += xp
 
-        await db.update_user_score(chat_id, user_id, new_score, new_coins, new_xp)
-    else:
-        # Create a new user entry if not exists
-        await db.set_user_score(chat_id, user_id, base_score, coins, xp)
+        # Save the updated user data back to the database
+        await db.update_user_score(chat_id, user_id, user_data)
+
+    except UserNotFoundError as e:
+        logging.error(f"Error updating score: {e}")
+        # Handle the error as needed, e.g., notify the user or log the issue
+    except Exception as e:
+        logging.error(f"Unexpected error in update_user_score: {e}")
