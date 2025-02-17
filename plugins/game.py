@@ -193,7 +193,9 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
     elif callback_query.data == "next":
         try:
             game_mode = await db.get_group_game_mode(chat_id)  # Get the game modes as a LIST
-            new_word = choice(game_mode)  # Use the LIST for choice()
+            if isinstance(game_mode, list):
+                game_mode = game_mode[0]  # Use the first mode if it's a list
+            new_word = choice(game_mode)  # Use the string for choice()
             update_data = {"$set": {"word": new_word}}  # Update with the new word
             await db.update_game(chat_id, update_data)
 
