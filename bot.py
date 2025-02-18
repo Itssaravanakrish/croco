@@ -4,7 +4,7 @@ import glob
 import importlib.util
 import sys
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME, LOG_CHANNEL  # Import LOG_CHANNEL
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME, LOG_CHANNEL
 from aiohttp import web
 from plugins.web_support import web_server
 from mongo.users_and_chats import Database
@@ -43,7 +43,7 @@ class Bot(Client):
             self.username = me.username  # Store username
 
             # Load plugins
-            self.load_plugins()
+            await self.load_plugins()  # Call this if load_plugins is async
 
             # Notify log channel about the bot restart
             start_message = f"{me.first_name} ✅✅ BOT started successfully ✅✅"
@@ -82,7 +82,7 @@ class Bot(Client):
             logging.error(f"Failed to stop the bot: {e}")
             await self.send_message(LOG_CHANNEL, f"Failed to stop the bot: {e}")
 
-    def load_plugins(self):
+    async def load_plugins(self):
         """Load all plugins from the plugins directory."""
         ppath = "plugins/*.py"
         files = glob.glob(ppath)
