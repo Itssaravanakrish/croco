@@ -1,12 +1,12 @@
-#score.py 
 from time import time
 import logging
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from words import choice
+from pyrogram.types import Message
 from mongo.users_and_chats import db
-from utils import get_message, is_user_admin, update_user_score
-from script import Language
+from utils import get_message
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Pay Command
 @Client.on_message(filters.command("pay"))
@@ -68,17 +68,21 @@ async def score_command(client: Client, message: Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
 
-    # Fetch the user's score, coins, and XP from the database
-    user_data = await db.get_user_score(chat_id, user_id)
+    try:
+        # Fetch the user's score, coins, and XP from the database
+        user_data = await db.get_user_score(chat_id, user_id)
 
-    if user_data:
-        await message.reply_text(
-            f"Your score: {user_data['score']}\n"
-            f"Coins: {user_data['coins']}\n"
-            f"XP: {user_data['xp']}"
-        )
-    else:
-        await message.reply_text("You have not scored any points yet.")
+        if user_data:
+            await message.reply_text(
+                f"Your score: {user_data['score']}\n"
+                f"Coins: {user_data['coins']}\n"
+                f"XP: {user_data['xp']}"
+            )
+        else:
+            await message.reply_text("You have not scored any points yet.")
+    except Exception as e:
+        logging.error(f"Error in score_command: {e}")
+        await message.reply_text("An error occurred while retrieving your score.")
 
 # Top Command
 @Client.on_message(filters.command("top"))
@@ -86,13 +90,15 @@ async def top_command(client: Client, message: Message):
     """Command to show the top users based on their scores."""
     chat_id = message.chat.id
 
-    # Fetch the top users from the database
-    top_users = await db.get_top_users(chat_id)
+    try:
+        # Fetch the top users from the database
+        top_users = await db.get_top_users(chat_id)
 
-    if top_users:
-        top_users_text = "\n".join([f"User  ID: {user['user_id']}, Score: {user['score']}, Coins: {user['coins']}, XP: {user['xp']}" for user in top_users])
-        await message.reply_text(f"Top Users:\n{top_users_text}")
-    else:
-        await message.reply_text("No scores available yet.")
-
-# Your existing game logic can continue below...
+        if top_users:
+            top_users_text = "\n".join([f"User  ID: {user['user_id']}, Score: {user['score']}, Coins: {user['coins']}, XP: {user['xp']}" for user in top_users])
+            await message.reply_text(f"Top Users:\n{top_users_text}")
+        else:
+            await message.reply_text("No scores available yet.")
+    except Exception as e:
+        logging.error(f"Error in top_command: {e}")
+        await message.reply_text("An error occurred while retrieving the top users.")
