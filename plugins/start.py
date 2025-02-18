@@ -52,8 +52,11 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
     try:
         if is_group:
             chat_id = str(message.chat.id)
+            logging.info(f"/start command received in group chat {chat_id} from user {user_id}.")
+
+            # Retrieve the group language
             group_language = await db.get_chat_language(chat_id)
-            logging.info(f"/start command received in group chat {chat_id} from user {user_id}. Language: {group_language}")
+            logging.info(f"Group language retrieved: {group_language}")
 
             # Register the chat if it hasn't been registered yet
             chat_data = {"title": message.chat.title, "type": message.chat.type.name}
@@ -63,19 +66,23 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
             
             # Use the existing welcome message for groups
             welcome_message = await get_message(group_language, "welcome_new_group")
-            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
+            if welcome_message is None:
+                logging.warning(f"Welcome message not found for language: {group_language}")
+                await message.reply_text("Welcome message not found.")
+                return
+            
+            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
 
         else:  # Private chat
-            group_language = Language.EN  # Default language for private chats
             logging.info(f"/start command received in private chat from user {user_id}.")
 
             # Register user
             if not await register_user(user_id, user_data):
-                await message.reply_text(await get_message(group_language, "error_registering_user"))
+                await message.reply_text(await get_message(Language.EN, "error_registering_user"))
                 return
 
             # Use the existing welcome message for private chats
-            welcome_message = await get_message(group_language, "welcome")
+            welcome_message = await get_message(Language.EN, "welcome")
             await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
     except Exception as e:
