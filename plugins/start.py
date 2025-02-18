@@ -63,7 +63,7 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
             
             # Use the existing welcome message for groups
             welcome_message = await get_message(group_language, "welcome_new_group")
-            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
+            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
         else:  # Private chat
             group_language = Language.EN  # Default language for private chats
