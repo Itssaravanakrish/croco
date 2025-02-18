@@ -1,10 +1,13 @@
 import logging
 import logging.config
+import glob
+import importlib.util
+import sys
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME  # Import MONGO_URI and MONGO_DB_NAME
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME, LOG_CHANNEL
 from aiohttp import web
 from plugins.web_support import web_server
-from mongo.users_and_chats import Database  # Import the Database class
+from mongo.users_and_chats import Database
 
 # Configure logging with error handling
 try:
@@ -28,7 +31,7 @@ class Bot(Client):
             plugins={"root": "plugins"},
             sleep_threshold=5,
         )
-        self.database = Database(MONGO_URI, MONGO_DB_NAME)  # Pass the URI and database name
+        self.database = Database(MONGO_URI, MONGO_DB_NAME)
 
     async def start(self):
         try:
@@ -38,6 +41,12 @@ class Bot(Client):
             self.mention = me.mention  # Store mention format
             self.username = me.username  # Store username
 
+            # Load plugins
+            self.load_plugins()
+            
+            # Notify log channel about the bot restart
+            await self.send_message(LOG_CHANNEL, f"{me.first_name} ✅✅ BOT started successfully ✅✅")
+            
             # Example usage of Database
             await self.database.add_user("123", {"name": "John Doe"})
             logging.info("User  added successfully: 123")
@@ -67,6 +76,23 @@ class Bot(Client):
             logging.info("Bot Stopped 🙄")
         except Exception as e:
             logging.error(f"Failed to stop the bot: {e}")
+
+    def load_plugins(self):
+        """Load all plugins from the plugins directory."""
+        ppath = "plugins/*.py"
+        files = glob.glob(ppath)
+        for name in files:
+            try:
+                with open(name) as a:
+                    plugin_name = Path(a.name).stem
+                    import_path = f"plugins.{plugin_name}"
+                    spec = importlib.util.spec_from_file_location(import_path, name)
+                    load = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(load)
+                    sys.modules[import_path] = load
+                    logging.info(f"Successfully imported plugin: {plugin_name}")
+            except Exception as e:
+                logging.error(f"Failed to load plugin {plugin_name}: {e}")
 
 # Create an instance of the Bot and run it
 if __name__ == "__main__":
