@@ -60,24 +60,23 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
             if not await register_chat(chat_id, chat_data):
                 await message.reply_text(await get_message(group_language, "error_registering_chat"))
                 return
-        else:
+            
+            # Use the existing welcome message for groups
+            welcome_message = await get_message(group_language, "welcome_new_group")
+            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
+
+        else:  # Private chat
             group_language = Language.EN  # Default language for private chats
             logging.info(f"/start command received in private chat from user {user_id}.")
 
-        # Register user
-        if not await register_user(user_id, user_data):
-            await message.reply_text(await get_message(group_language, "error_registering_user"))
-            return
+            # Register user
+            if not await register_user(user_id, user_data):
+                await message.reply_text(await get_message(group_language, "error_registering_user"))
+                return
 
-        # Send welcome message
-        welcome_message_key = "welcome_new_group" if is_group else "welcome"
-        welcome_message = await get_message(group_language, welcome_message_key)
-
-        if welcome_message is None:
-            logging.error(f"Welcome message not found for language: {group_language}. Defaulting to English.")
-            welcome_message = await get_message(Language.EN, welcome_message_key)
-
-        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp if is_group else inline_keyboard_markup_pm)
+            # Use the existing welcome message for private chats
+            welcome_message = await get_message(group_language, "welcome")
+            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
 
     except Exception as e:
         logging.exception(f"Error in handle_start_command: {e}")
@@ -91,9 +90,6 @@ async def start_private_handler(client: Client, message: Message):
 # Command handler for /start in group chats
 @Client.on_message(filters.command("start") & filters.group)
 async def start_group_handler(client: Client, message: Message):
-    logging.info(f"/start command received in group chat {message.chat.id} from user {message.from_user.id}.")
-
-    # Handle /start COMMAND in group (regular message)
     await handle_start_command(client, message, is_group=True)
     
 @Client.on_callback_query()
@@ -211,8 +207,7 @@ async def set_language_callback(client: Client, callback_query: CallbackQuery):
         )
     except Exception as e:
         logging.exception(f"Error setting language: {e}")
-        await callback_query.answer(await get_message(Language.EN, "error_setting_language"), show_alert=True)  # Alert in english
-        # Handle the error, maybe send a message to the user
+        await callback_query.answer("An error occurred while setting the language. Please try again.", show_alert=True)
 
 async def change_game_mode_callback(client: Client, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
