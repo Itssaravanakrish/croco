@@ -52,7 +52,7 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
     try:
         if is_group:
             chat_id = str(message.chat.id)
-            group_language = await get_chat_language(chat_id)
+            group_language = await db.get_chat_language(chat_id)
             logging.info(f"/start command received in group chat {chat_id} from user {user_id}.")
         else:
             group_language = Language.EN  # Default language for private chats
@@ -80,13 +80,15 @@ async def start_private_handler(client: Client, message: Message):
 # Command handler for /start in group chats
 @Client.on_message(filters.command("start") & filters.group)
 async def start_group_handler(client: Client, message: Message):
+    logging.info(f"/start command received in group chat {message.chat.id} from user {message.from_user.id}.")
+
     # Handle BOT ADDED to group (new_chat_members)
     if message.new_chat_members:
         for new_member in message.new_chat_members:
             if new_member.id == client.me.id:  # Check if it's the bot
                 chat_id = str(message.chat.id)
                 chat_data = {"title": message.chat.title, "type": message.chat.type.name}
-                group_language = await get_chat_language(chat_id)
+                group_language = await db.get_chat_language(chat_id)
                 try:
                     if not await register_chat(chat_id, chat_data):
                         await message.reply_text(await get_message(group_language, "error_registering_chat"))
@@ -101,7 +103,7 @@ async def start_group_handler(client: Client, message: Message):
 
     # Handle /start COMMAND in group (regular message)
     await handle_start_command(client, message, is_group=True)
-
+    
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()  # Acknowledge button press
