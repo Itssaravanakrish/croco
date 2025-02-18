@@ -4,10 +4,11 @@ import glob
 import importlib.util
 import sys
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME, LOG_CHANNEL
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME, LOG_CHANNEL  # Import LOG_CHANNEL
 from aiohttp import web
 from plugins.web_support import web_server
 from mongo.users_and_chats import Database
+from pathlib import Path
 
 # Configure logging with error handling
 try:
@@ -43,10 +44,12 @@ class Bot(Client):
 
             # Load plugins
             self.load_plugins()
-            
+
             # Notify log channel about the bot restart
-            await self.send_message(LOG_CHANNEL, f"{me.first_name} ✅✅ BOT started successfully ✅✅")
-            
+            start_message = f"{me.first_name} ✅✅ BOT started successfully ✅✅"
+            await self.send_message(LOG_CHANNEL, start_message)
+            logging.info(start_message)  # Log the bot start message
+
             # Example usage of Database
             await self.database.add_user("123", {"name": "John Doe"})
             logging.info("User  added successfully: 123")
@@ -64,9 +67,9 @@ class Bot(Client):
             await app.setup()  # Set up the web server
             bind_address = "0.0.0.0"  # Bind to all interfaces
             await web.TCPSite(app, bind_address, PORT).start()  # Start the web server
-            logging.info(f"{me.first_name} ✅✅ BOT started successfully ✅✅")
         except Exception as e:
             logging.error(f"Failed to start the bot: {e}")
+            await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
             exit(1)  # Exit if the bot fails to start
 
     async def stop(self, *args):
@@ -74,8 +77,10 @@ class Bot(Client):
             await self.database.close()  # Close the MongoDB connection
             await super().stop()  # Stop the bot
             logging.info("Bot Stopped 🙄")
+            await self.send_message(LOG_CHANNEL, "Bot Stopped 🙄")
         except Exception as e:
             logging.error(f"Failed to stop the bot: {e}")
+            await self.send_message(LOG_CHANNEL, f"Failed to stop the bot: {e}")
 
     def load_plugins(self):
         """Load all plugins from the plugins directory."""
@@ -93,6 +98,7 @@ class Bot(Client):
                     logging.info(f"Successfully imported plugin: {plugin_name}")
             except Exception as e:
                 logging.error(f"Failed to load plugin {plugin_name}: {e}")
+                await self.send_message(LOG_CHANNEL, f"Failed to load plugin {plugin_name}: {e}")
 
 # Create an instance of the Bot and run it
 if __name__ == "__main__":
