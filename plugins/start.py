@@ -94,10 +94,50 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
 async def start_private_handler(client: Client, message: Message):
     await handle_start_command(client, message, is_group=False)
 
-# Command handler for /start in group chats
 @Client.on_message(filters.command("start") & filters.group)
 async def start_group_handler(client: Client, message: Message):
-    await handle_start_command(client, message, is_group=True)
+    user_id = str(message.from_user.id)
+    user_data = {
+        "first_name": message.from_user.first_name,
+        "username": message.from_user.username,
+    }
+
+    # Register user
+    if not await register_user(user_id, user_data):
+        await message.reply_text(await get_message("en", "error_registering_user"))  # Default to English
+        return
+
+    chat_id = str(message.chat.id)
+    chat_data = {
+        "title": message.chat.title,
+        "type": message.chat.type.name,
+    }
+
+    # Register chat
+    if not await register_chat(chat_id, chat_data):
+        await message.reply_text(await get_message("en", "error_registering_chat"))  # Default to English
+        return
+
+    # Determine the group's preferred language
+    group_language = await db.get_group_language(chat_id)  # Fetch the group's language preference
+    language = group_language if group_language else "en"  # Default to English if not set
+
+    inline_keyboard_markup_grp = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Add Me to Your Group 👥", url="https://t.me/YourBotUsername?startgroup=new")],
+            [InlineKeyboardButton("Settings ⚙️", callback_data="settings")],
+            [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/YourSupportGroupLink")],
+            [InlineKeyboardButton("Close ❌", callback_data="close")]
+        ]
+    )
+    
+    # Prepare the welcome message
+    welcome_message = await get_message(language, "welcome")
+    if not welcome_message:
+        logging.error("The welcome message is empty.")
+        return
+
+    await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
     
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
