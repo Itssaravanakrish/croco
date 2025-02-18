@@ -51,3 +51,8 @@ API_HASH = getenv('API_HASH', '3448177952613312689f44b9d909b5d3')
 if not API_HASH:
     logging.error("API_HASH is not set")
     raise ValueError("API_HASH is not set")
+
+LOG_CHANNEL = int(getenv('LOG_CHANNEL', '-1001566660231'))  # Default to your channel ID
+if not LOG_CHANNEL:
+    logging.error("LOG_CHANNEL is not set")
+    raise ValueError("LOG_CHANNEL is not set")
