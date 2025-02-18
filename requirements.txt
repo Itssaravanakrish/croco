@@ -8,8 +8,6 @@ schedule>=1.1.0
 TgCrypto
 flask
 uvicorn
-
-#unwanted
 moviepy
 Pillow
 yt-dlp
