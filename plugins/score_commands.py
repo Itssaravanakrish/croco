@@ -8,8 +8,10 @@ from utils import get_message
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+CMD = ["/", "."]
+
 # Pay Command
-@Client.on_message(filters.command("pay") & filters.group)
+@Client.on_message(filters.command("pay", CMD) & filters.group)
 async def pay_command(client: Client, message: Message):
     """Command to pay coins to another user."""
     if not message.chat:
@@ -62,7 +64,7 @@ async def pay_command(client: Client, message: Message):
         await message.reply_text("An error occurred while processing your payment.")
 
 # Score Command
-@Client.on_message(filters.command("score") & filters.group)
+@Client.on_message(filters.command("score", CMD) & filters.group)
 async def score_command(client: Client, message: Message):
     """Command to check the user's score, coins, and XP."""
     user_id = message.from_user.id
@@ -85,7 +87,7 @@ async def score_command(client: Client, message: Message):
         await message.reply_text("An error occurred while retrieving your score.")
 
 # Top Command
-@Client.on_message(filters.command("top") & filters.group)
+@Client.on_message(filters.command("top", CMD) & filters.group)
 async def top_command(client: Client, message: Message):
     """Command to show the top users based on their scores."""
     chat_id = message.chat.id
