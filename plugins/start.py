@@ -101,29 +101,6 @@ async def start_group_handler(client: Client, message: Message):
 
     # Handle /start COMMAND in group (regular message)
     await handle_start_command(client, message, is_group=True)
-    
-# Command handler for /start in private messages
-@Client.on_message(filters.command("start") & filters.private)
-async def start_private_handler(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    user_data = {
-        "first_name": message.from_user.first_name,
-        "username": message.from_user.username,
-    }
-
-    try:
-        logging.info(f"/start command received in private chat from user {user_id}.")
-        if not await register_user(user_id, user_data):
-            await message.reply_text(await get_message(Language.EN, "error_registering_user"))
-            return
-
-        language = Language.EN  # Default language for private chats
-        welcome_message = await get_message(language, "welcome")
-        await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
-
-    except Exception as e:
-        logging.exception(f"Error in start_private_handler: {e}")
-        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
 
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
