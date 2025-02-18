@@ -134,6 +134,7 @@ async def game_command(client: Client, message: Message):
     # If no ongoing game or the user is the host, start a new game
     game_mode = await db.get_group_game_mode(chat_id)  # Get the game mode
     await new_game(client, message, language, game_mode)  # Start a new game
+    await message.reply_text(await get_message(language, "new_game_started"))  # Inform the user that a new game has started
 
 @Client.on_message(filters.group)
 async def group_message_handler(client: Client, message: Message):
@@ -224,32 +225,6 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
         await callback_query.message.delete()
         await client.send_message(chat_id, await get_message(language, "game_ended"))
         await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
-
-@Client.on_message(filters.group & filters.command("set_mode", CMD))
-async def set_game_mode(client: Client, message: Message):
-    user_id = message.from_user.id
-    chat_id = message.chat.id
-    language_str = await db.get_chat_language(chat_id)
-    try:
-        language = Language(language_str)
-    except ValueError:
-        language = Language.EN
-
-    if not await is_user_admin(client, chat_id, user_id):
-        await message.reply_text(await get_message(language, "not_admin"))
-        return
-
-    mode = message.command[1] if len(message.command) > 1 else None
-    if mode not in ["easy", "hard", "adult"]:
-        await message.reply_text(await get_message(language, "invalid_mode"))
-        return
-
-    try:
-        await db.set_group_game_mode(chat_id, mode)
-        await message.reply_text(await get_message(language, "game_mode_set", mode=mode))
-    except Exception as e:
-        logging.error(f"Error setting game mode in database: {e}")
-        await message.reply_text(await get_message(language, "database_error"))
 
 @Client.on_callback_query(filters.regex("choose_leader"))
 async def choose_leader_callback(client: Client, callback_query: CallbackQuery):
