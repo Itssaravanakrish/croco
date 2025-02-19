@@ -33,7 +33,7 @@ async def check_ping(_, message):
     await message.reply_text(await get_message(language, "ping"))
 
 @Client.on_message(filters.command("broadcast_pm", CMD) & filters.user(SUDO_USERS))
-async def broadcast_pm_callback(client: Client, message: Message):
+async def broadcast_pm_callback(Client, Message):
     if len(message.command) < 2:
         language = await db.get_chat_language(message.chat.id)
         await message.reply_text(await get_message(language, "provide_message"))
@@ -77,7 +77,7 @@ async def broadcast_pm_callback(client: Client, message: Message):
 
 
 @Client.on_message(filters.command("broadcast_group", CMD) & filters.user(SUDO_USERS))
-async def broadcast_group_callback(client: Client, message: Message):
+async def broadcast_group_callback(Client, Message):
     if len(message.command) < 2:
         language = await db.get_chat_language(message.chat.id)
         await message.reply_text(await get_message(language, "provide_message"))
@@ -121,7 +121,7 @@ async def broadcast_group_callback(client: Client, message: Message):
 
 
 @Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
-async def stats(bot, update):
+async def stats(client, message):
     language_str = await db.get_chat_language(message.chat.id)
     try:
         language = Language(language_str)
