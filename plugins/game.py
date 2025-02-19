@@ -116,22 +116,11 @@ async def game_command(client, message):
         return
 
     if ongoing_game:
-        time_elapsed = time() - ongoing_game['start']
-        
-        # Check if the game has timed out
-        if time_elapsed >= GAME_TIMEOUT:
-            await handle_end_game(client, message, language)  # End the ongoing game
-            game_mode = await db.get_group_game_mode(chat_id)  # Get the game mode
-            await new_game(client, message, language, game_mode)  # Start a new game
-            return
+        # Handle the case where a game is already ongoing
+        await message.reply_text(await get_message(language, "game_already_started"))
+        return
 
-        # If the game is still ongoing, check if the user is the host
-        host_id = ongoing_game["host"]["id"]
-        if message.from_user.id != host_id:
-            await message.reply_text(await get_message(language, "game_already_started"))
-            return
-
-    # If no ongoing game or the user is the host, start a new game
+    # If no ongoing game, start a new game
     game_mode = await db.get_group_game_mode(chat_id)  # Get the game mode
     await new_game(client, message, language, game_mode)  # Start a new game
     await message.reply_text(await get_message(language, "new_game_started"))  # Inform the user that a new game has started
@@ -257,7 +246,7 @@ async def choose_leader_callback(client, callback_query):
         logging.error(f"Error starting new game for chat {chat_id}: {e}")
         await callback_query.answer("Failed to start the game. Please try again.", show_alert=True)
 
-async def handle_end_game(Client, Message, Language):
+async def handle_end_game(client, message, language):
     try:
         await db.remove_game(message.chat.id)
         
