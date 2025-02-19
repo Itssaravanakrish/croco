@@ -27,7 +27,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
 )
 
   
-async def new_game(client: Client, message: Message, language: Language, game_mode: str) -> bool:
+async def new_game(client, message, language, game_mode: str) -> bool:
     try:
         # Ensure game_mode is a string; if it's a list, take the first element
         if isinstance(game_mode, list):
@@ -71,7 +71,7 @@ async def new_game(client: Client, message: Message, language: Language, game_mo
         await message.reply_text(await get_message(language.value, "database_error"))
         return False
 
-async def check_answer(client: Client, message: Message, game: dict, language: Language):
+async def check_answer(client, message, game, language):
     current_word = game.get("word")
     host_id = game.get("host", {}).get("id")
     chat_id = message.chat.id  # Get the chat ID
@@ -99,7 +99,7 @@ async def check_answer(client: Client, message: Message, game: dict, language: L
                 # The new_game function will handle sending the "game started" message
 
 @Client.on_message(filters.group & filters.command("game", CMD))
-async def game_command(client: Client, message: Message):
+async def game_command(client, message):
     chat_id = message.chat.id
     language_str = await db.get_chat_language(chat_id)
     
@@ -137,7 +137,7 @@ async def game_command(client: Client, message: Message):
     await message.reply_text(await get_message(language, "new_game_started"))  # Inform the user that a new game has started
 
 @Client.on_message(filters.group)
-async def group_message_handler(client: Client, message: Message):
+async def group_message_handler(client, message):
     chat_id = message.chat.id
     language_str = await db.get_chat_language(chat_id)
     
@@ -157,7 +157,7 @@ async def group_message_handler(client: Client, message: Message):
     await check_answer(client, message, game, language)
 
 @Client.on_callback_query(filters.regex("view|next|end_game"))
-async def game_action_callback(client: Client, callback_query: CallbackQuery):
+async def game_action_callback(client, callback_query)::
     user_id = callback_query.from_user.id
     chat_id = callback_query.message.chat.id
 
@@ -227,7 +227,7 @@ async def game_action_callback(client: Client, callback_query: CallbackQuery):
         await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
 
 @Client.on_callback_query(filters.regex("choose_leader"))
-async def choose_leader_callback(client: Client, callback_query: CallbackQuery):
+async def choose_leader_callback(client, callback_query):
     user_id = callback_query.from_user.id
     chat_id = callback_query.message.chat.id
 
@@ -257,7 +257,7 @@ async def choose_leader_callback(client: Client, callback_query: CallbackQuery):
         logging.error(f"Error starting new game for chat {chat_id}: {e}")
         await callback_query.answer("Failed to start the game. Please try again.", show_alert=True)
 
-async def handle_end_game(client: Client, message: Message, language: Language):
+async def handle_end_game(Client, Message, Language):
     try:
         await db.remove_game(message.chat.id)
         
