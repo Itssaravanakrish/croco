@@ -39,6 +39,36 @@ class Database:
         self.client.close()
         logging.info("Database connection closed.")
 
+    async def get_user_count(self) -> int:
+        """Retrieve the count of users in the database."""
+        try:
+            count = await self.users_collection.count_documents({})
+            logging.info(f"Total users count: {count}")
+            return count
+        except Exception as e:
+            logging.error(f"Error getting user count: {e}")
+            return 0  # Return 0 if there's an error
+
+    async def get_chat_count(self) -> int:
+        """Retrieve the count of chats in the database."""
+        try:
+            count = await self.chats_collection.count_documents({})
+            logging.info(f"Total chats count: {count}")
+            return count
+        except Exception as e:
+            logging.error(f"Error getting chat count: {e}")
+            return 0  # Return 0 if there's an error
+
+    async def get_game_count(self) -> int:
+        """Retrieve the count of games in the database."""
+        try:
+            count = await self.games_collection.count_documents({})
+            logging.info(f"Total games count: {count}")
+            return count
+        except Exception as e:
+            logging.error(f"Error getting game count: {e}")
+            return 0  # Return 0 if there's an error
+
     async def handle_db_error(self, action: str, identifier: str, e: Exception, query: Optional[Dict] = None) -> None:
         """Handle database errors by logging and raising a custom exception."""
         log_message = f"Failed to {action} for {identifier}: {e}"
@@ -62,7 +92,7 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add user", user_id, e)
 
-    async def get_user(self, user_id: str) -> dict:
+    async def get_user(self, user_id: str ) -> dict:
         """Retrieve a user from the database by user ID."""
         user = await self.users_collection.find_one({"user_id": user_id})
         if user is None:
@@ -172,7 +202,7 @@ class Database:
         """Retrieve a user's score, coins, and XP from the database."""
         user_score = await self.users_collection.find_one({"chat_id": chat_id, "user_id": user_id})
         if user_score is None:
-            raise UserNotFoundError(f"User  {user_id} not found in chat {chat_id}.")
+            raise UserNotFoundError(f"User   {user_id} not found in chat {chat_id}.")
         return user_score
 
     async def update_user_score(self, chat_id: str, user_id: str, score: int, coins: int, xp: int) -> None:
@@ -187,7 +217,7 @@ class Database:
                 }},
                 upsert=True  # Create a new entry if it doesn't exist
             )
-            logging.info(f"User  {user_id} score updated in chat {chat_id}.")
+            logging.info(f"User   {user_id} score updated in chat {chat_id}.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("update user score", user_id, e)
 
