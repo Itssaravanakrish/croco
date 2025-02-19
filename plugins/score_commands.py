@@ -12,7 +12,7 @@ CMD = ["/", "."]
 
 # Pay Command
 @Client.on_message(filters.command("pay", CMD) & filters.group)
-async def pay_command(client: Client, message: Message):
+async def pay_command(client, message):
     """Command to pay coins to another user."""
     if not message.chat:
         await message.reply_text("This command can only be used in group chats.")
@@ -65,7 +65,7 @@ async def pay_command(client: Client, message: Message):
 
 # Score Command
 @Client.on_message(filters.command("score", CMD) & filters.group)
-async def score_command(client: Client, message: Message):
+async def score_command(client, message):
     """Command to check the user's score, coins, and XP."""
     user_id = message.from_user.id
     chat_id = message.chat.id
@@ -88,7 +88,7 @@ async def score_command(client: Client, message: Message):
 
 # Top Command
 @Client.on_message(filters.command("top", CMD) & filters.group)
-async def top_command(client: Client, message: Message):
+async def top_command(client, message):
     """Command to show the top users based on their scores."""
     chat_id = message.chat.id
 
