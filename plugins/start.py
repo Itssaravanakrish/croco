@@ -5,7 +5,6 @@ from mongo.users_and_chats import db  # Replace with your actual module path
 from utils import get_message, register_user, register_chat, is_user_admin  # Replace with your actual module path
 from script import Language  # Replace with your actual module path
 from words import get_word_list, choice  # Import from words.py
-from bot import bot  # Import the bot instance
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -91,53 +90,15 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
         await message.reply_text(await get_message(Language.EN, "error_processing_command"))
 
 # Command handler for /start in private messages
-# @bot.on_message(filters.command("start") & filters.private)
-# async def start_private_handler(client: Client, message: Message):
-#     await handle_start_command(client, message, is_group=False)
+@Client.on_message(filters.command("start") & filters.private)
+async def start_private_handler(client: Client, message: Message):
+    await handle_start_command(client, message, is_group=False)
 
-@bot.on_message(filters.command("start"))
-async def start_command_handler(client: Client, message: Message):
-    user_id = str(message.from_user.id)
-    user_data = {
-        "first_name": message.from_user.first_name,
-        "username": message.from_user.username,
-    }
+@Client.on_message(filters.command("start") & filters.group)
+async def start_private_handler(client: Client, message: Message):
+    await handle_start_command(client, message, is_group=True)
 
-    try:
-        if message.chat.type in ["group", "supergroup", "channel"]:
-            chat_id = str(message.chat.id)
-            logging.info(f"/start command received in group chat {chat_id} from user {user_id}.")
-
-            group_language = await db.get_chat_language(chat_id)
-            logging.info(f"Group language retrieved: {group_language}")
-
-            if not await register_chat(chat_id, {"title": message.chat.title, "type": message.chat.type.name}):
-                await message.reply_text(await get_message(group_language, "error_registering_chat"))
-                return
-
-            welcome_message = await get_message(group_language, "welcome_new_group")
-            if welcome_message is None:
-                logging.warning(f"Welcome message not found for language: {group_language}")
-                await message.reply_text("Welcome message not found.")
-                return
-
-            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
-
-        else:  # Private chat
-            logging.info(f"/start command received in private chat from user {user_id}.")
-
-            if not await register_user(user_id, user_data):
-                await message.reply_text(await get_message(Language.EN, "error_registering_user"))
-                return
-
-            welcome_message = await get_message(Language.EN, "welcome")
-            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_pm)
-
-    except Exception as e:
-        logging.exception(f"Error in start_command_handler: {e}")
-        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-    
-@bot.on_callback_query()
+@Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()  # Acknowledge button press
 
