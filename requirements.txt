@@ -15,3 +15,4 @@ yt-dlp
 requests
 fake-useragent
 beautifulsoup4
+opencv-python
