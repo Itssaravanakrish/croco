@@ -157,7 +157,7 @@ async def group_message_handler(client, message):
     await check_answer(client, message, game, language)
 
 @Client.on_callback_query(filters.regex("view|next|end_game"))
-async def game_action_callback(client, callback_query)::
+async def game_action_callback(client, callback_query):
     user_id = callback_query.from_user.id
     chat_id = callback_query.message.chat.id
 
