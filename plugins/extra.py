@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 CMD = ["/", "."]
 
 @Client.on_message(filters.command("alive", CMD))
-async def alive_callback(client: Client, message: Message):
+async def check_alive(_, message):
     language_str = await db.get_chat_language(message.chat.id)
     try:
         language = Language(language_str)
@@ -24,7 +24,7 @@ async def alive_callback(client: Client, message: Message):
     await message.reply_text(await get_message(language, "alive"))
 
 @Client.on_message(filters.command("ping", CMD))
-async def ping_callback(client: Client, message: Message):
+async def check_ping(_, message):
     language_str = await db.get_chat_language(message.chat.id)
     try:
         language = Language(language_str)
@@ -121,7 +121,7 @@ async def broadcast_group_callback(client: Client, message: Message):
 
 
 @Client.on_message(filters.command("stats", CMD) & filters.user(SUDO_USERS))
-async def stats_callback(client: Client, message: Message):
+async def stats(bot, update):
     language_str = await db.get_chat_language(message.chat.id)
     try:
         language = Language(language_str)
