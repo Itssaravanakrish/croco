@@ -42,9 +42,6 @@ class Bot(Client):
             self.mention = me.mention  # Store mention format
             self.username = me.username  # Store username
 
-            # Load plugins
-            await self.load_plugins()  # Call this if load_plugins is async
-
             # Notify log channel about the bot restart
             start_message = f"{me.first_name} ✅✅ BOT started successfully ✅✅"
             await self.send_message(LOG_CHANNEL, start_message)
@@ -81,24 +78,6 @@ class Bot(Client):
         except Exception as e:
             logging.error(f"Failed to stop the bot: {e}")
             await self.send_message(LOG_CHANNEL, f"Failed to stop the bot: {e}")
-
-    async def load_plugins(self):
-        """Load all plugins from the plugins directory."""
-        ppath = "plugins/*.py"
-        files = glob.glob(ppath)
-        for name in files:
-            try:
-                with open(name) as a:
-                    plugin_name = Path(a.name).stem
-                    import_path = f"plugins.{plugin_name}"
-                    spec = importlib.util.spec_from_file_location(import_path, name)
-                    load = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(load)
-                    sys.modules[import_path] = load
-                    logging.info(f"Successfully imported plugin: {plugin_name}")
-            except Exception as e:
-                logging.error(f"Failed to load plugin {plugin_name}: {e}")
-                await self.send_message(LOG_CHANNEL, f"Failed to load plugin {plugin_name}: {e}")
 
 # Create an instance of the Bot and run it
 if __name__ == "__main__":
