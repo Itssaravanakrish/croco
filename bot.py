@@ -1,14 +1,11 @@
 import logging
 import logging.config
-import glob
-import importlib.util
 import sys
 from pyrogram import Client
 from config import API_ID, API_HASH, BOT_TOKEN, PORT, MONGO_URI, MONGO_DB_NAME, LOG_CHANNEL
 from aiohttp import web
 from plugins.web_support import web_server
 from mongo.users_and_chats import Database
-from pathlib import Path
 
 # Configure logging with error handling
 try:
@@ -16,6 +13,7 @@ try:
     logging.info("Logging configuration loaded successfully.")
 except Exception as e:
     print(f"Error loading logging configuration: {e}")
+    logging.basicConfig(level=logging.INFO)  # Fallback to basic logging if config fails
 
 # Set logging levels
 logging.getLogger().setLevel(logging.INFO)
@@ -64,10 +62,11 @@ class Bot(Client):
             await app.setup()  # Set up the web server
             bind_address = "0.0.0.0"  # Bind to all interfaces
             await web.TCPSite(app, bind_address, PORT).start()  # Start the web server
+            logging.info(f"Web server started on {bind_address}:{PORT}")
         except Exception as e:
             logging.error(f"Failed to start the bot: {e}")
             await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
-            exit(1)  # Exit if the bot fails to start
+            sys.exit(1)  # Exit if the bot fails to start
 
     async def stop(self, *args):
         try:
