@@ -100,7 +100,7 @@ async def start_group_handler(client, message):
     await handle_start_command(client, message, is_group=True)
     
 @Client.on_callback_query()
-async def button_callback(client: Client, callback_query: CallbackQuery):
+async def button_callback(Client, callback_query):
     await callback_query.answer()  # Acknowledge button press
 
     try:
@@ -135,7 +135,7 @@ async def button_callback(client: Client, callback_query: CallbackQuery):
         logging.exception(f"Error in button_callback: {e}")
         await callback_query.message.reply_text(await get_message(Language.EN, "error_processing_command"))  # Or a more specific message
 
-async def settings_callback(client: Client, callback_query: CallbackQuery):
+async def settings_callback(Client, callback_query):
     if not await is_user_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
         await callback_query.answer(await get_message(Language.EN, "not_admin"), show_alert=True)  # English fallback
         return
@@ -162,7 +162,7 @@ async def settings_callback(client: Client, callback_query: CallbackQuery):
         logging.exception(f"Error editing message: {e}")
         await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True)  # English fallback
 
-async def change_language_callback(client: Client, callback_query: CallbackQuery):
+async def change_language_callback(Client, callback_query):
     chat_id = callback_query.message.chat.id
     language_str = await db.get_chat_language(chat_id)
     try:
@@ -186,7 +186,7 @@ async def change_language_callback(client: Client, callback_query: CallbackQuery
         logging.exception(f"Error editing message: {e}")
         await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True)  # English fallback
         
-async def set_language_callback(client: Client, callback_query: CallbackQuery):
+async def set_language_callback(Client, callback_query):
     new_language_str = callback_query.data.split("_")[-1]  # Get language as string
     try:
         new_language = Language(new_language_str)  # Convert to enum
@@ -216,7 +216,7 @@ async def set_language_callback(client: Client, callback_query: CallbackQuery):
         logging.exception(f"Error setting language: {e}")
         await callback_query.answer("An error occurred while setting the language. Please try again.", show_alert=True)
 
-async def change_game_mode_callback(client: Client, callback_query: CallbackQuery):
+async def change_game_mode_callback(Client, callback_query):
     chat_id = callback_query.message.chat.id
     language_str = await db.get_chat_language(chat_id)
     try:
@@ -240,7 +240,7 @@ async def change_game_mode_callback(client: Client, callback_query: CallbackQuer
         logging.exception(f"Error editing message: {e}")
         await callback_query.answer(await get_message(Language.EN, "error_editing_message"), show_alert=True)  # English fallback
 
-async def set_game_mode_callback(client: Client, callback_query: CallbackQuery):
+async def set_game_mode_callback(Client, callback_query):
     new_game_mode_str = callback_query.data.split("_")[-1]  # Get the mode string (e.g., "easy")
     chat_id = callback_query.message.chat.id
     language_str = await db.get_chat_language(chat_id)
