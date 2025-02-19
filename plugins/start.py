@@ -42,7 +42,7 @@ inline_keyboard_markup_grp = InlineKeyboardMarkup(
     ]
 )
 
-async def handle_start_command(client: Client, message: Message, is_group: bool):
+async def handle_start_command(client, message, is_group: bool):
     user_id = str(message.from_user.id)
     user_data = {
         "first_name": message.from_user.first_name,
@@ -91,13 +91,14 @@ async def handle_start_command(client: Client, message: Message, is_group: bool)
 
 # Command handler for /start in private messages
 @Client.on_message(filters.command("start") & filters.private)
-async def start_private_handler(client: Client, message: Message):
+async def start_private_handler(client, message):
     await handle_start_command(client, message, is_group=False)
 
+# Command handler for /start in group messages
 @Client.on_message(filters.command("start") & filters.group)
-async def start_private_handler(client: Client, message: Message):
+async def start_group_handler(client, message):
     await handle_start_command(client, message, is_group=True)
-
+    
 @Client.on_callback_query()
 async def button_callback(client: Client, callback_query: CallbackQuery):
     await callback_query.answer()  # Acknowledge button press
