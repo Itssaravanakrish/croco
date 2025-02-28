@@ -29,6 +29,7 @@ class Bot(Client):
             workers=50,
             plugins={"root": "plugins"},
             sleep_threshold=5,
+            session_name="my_bot"  # Specify a session name
         )
         self.database = Database(MONGO_URI, MONGO_DB_NAME)
 
