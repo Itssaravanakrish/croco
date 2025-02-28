@@ -22,14 +22,13 @@ logging.getLogger("pyrogram").setLevel(logging.ERROR)
 class Bot(Client):
     def __init__(self):
         super().__init__(
-            name="Tamil-corobot",
+            "my_bot",  # This is the session name
             api_id=API_ID,
             api_hash=API_HASH,
             bot_token=BOT_TOKEN,
             workers=50,
             plugins={"root": "plugins"},
             sleep_threshold=5,
-            session_name="my_bot"  # Specify a session name
         )
         self.database = Database(MONGO_URI, MONGO_DB_NAME)
 
@@ -43,8 +42,10 @@ class Bot(Client):
 
             # Notify log channel about the bot restart
             start_message = f"{me.first_name} ✅✅ BOT started successfully ✅✅"
-            await self.send_message(LOG_CHANNEL, start_message)
             logging.info(start_message)  # Log the bot start message
+
+            # Send the start message only after the bot is fully started
+            await self.send_message(LOG_CHANNEL, start_message)
 
             # Example usage of Database
             await self.database.add_user("123", {"name": "John Doe"})
@@ -66,7 +67,9 @@ class Bot(Client):
             logging.info(f"Web server started on {bind_address}:{PORT}")
         except Exception as e:
             logging.error(f"Failed to start the bot: {e}")
-            await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
+            # Only attempt to send a message if the bot has started
+            if self.is_connected:
+                await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
             sys.exit(1)  # Exit if the bot fails to start
 
     async def stop(self, *args):
