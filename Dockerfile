@@ -10,6 +10,10 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user and switch to that user
+RUN useradd -m myuser
+USER myuser
+
 # Copy the requirements.txt file into the working directory
 COPY requirements.txt .
 
@@ -17,7 +21,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Copy the rest of the application code into the working directory
-COPY . .
+COPY --chown=myuser:myuser . .
 
 # Specify the command to run the bot when the container starts
 CMD ["python", "bot.py"]
