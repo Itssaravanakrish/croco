@@ -97,7 +97,7 @@ async def start_private_handler(client, message):
 # Command handler for /start in group messages
 @Client.on_message(filters.command("start") & filters.group)
 async def start_group_handler(client, message):
-    await message.reply_text("Group start command received!")
+    await handle_start_command(client, message, is_group=True)
     
 @Client.on_callback_query()
 async def button_callback(Client, callback_query):
