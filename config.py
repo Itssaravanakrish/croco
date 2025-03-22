@@ -23,7 +23,7 @@ def get_env_variable(var_name, default=None):
 BOT_TOKEN = get_env_variable('BOT_TOKEN')
 
 # Retrieve the MongoDB URI from environment variables
-MONGO_URI = get_env_variable('MONGO_URI', 'mongodb+srv://BooksBot:BooksBot@cluster0.qtujn.mongodb.net/?retryWrites=true&w=majority')
+MONGO_URI = get_env_variable('MONGO_URI', 'mongodb+srv://filestream:filestream@cluster0.d1dlfzv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
 
 # Retrieve the MongoDB database name from environment variables
 MONGO_DB_NAME = get_env_variable('MONGO_DB_NAME', 'crocogame')
