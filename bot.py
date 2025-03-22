@@ -42,8 +42,10 @@ class Bot(Client):
 
             # Notify log channel about the bot restart
             start_message = f"{me.first_name} ✅✅ BOT started successfully ✅✅"
-            await self.send_message(LOG_CHANNEL, start_message)
             logging.info(start_message)  # Log the bot start message
+
+            # Only send message to LOG_CHANNEL after successful start
+            await self.send_message(LOG_CHANNEL, start_message)
 
             # Example usage of Database
             await self.database.add_user("123", {"name": "John Doe"})
@@ -65,7 +67,9 @@ class Bot(Client):
             logging.info(f"Web server started on {bind_address}:{PORT}")
         except Exception as e:
             logging.error(f"Failed to start the bot: {e}")
-            await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
+            # Only send message if the bot has started successfully
+            if self.is_connected:
+                await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
             sys.exit(1)  # Exit if the bot fails to start
 
     async def stop(self, *args):
