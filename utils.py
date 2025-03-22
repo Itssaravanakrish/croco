@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Optional, List  # Import Listfrom mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError  # Make sure this import is correct
+from typing import Dict, Optional, List
+from mongo.users_and_chats import db, UserNotFoundError, ChatNotFoundError  # Ensure correct imports
 from script import messages, Language  # Import Language enum as well
 from pyrogram import Client
 
@@ -11,7 +12,6 @@ logging.basicConfig(
 
 async def get_message(language: str, key: str, **kwargs) -> Optional[str]:
     """Fetch localized message based on language."""
-
     try:
         language_enum = Language(language)  # Convert the language string to Language enum member
     except ValueError:  # If the language string is not a valid enum member
@@ -55,7 +55,7 @@ async def is_user_admin(client: Client, chat_id: str, user_id: str) -> bool:
         logging.error(f"Failed to check if user {user_id} is admin in chat {chat_id}: {e}")
         return False
 
-async def set_chat_language(chat_id: str, language: str) -> bool:  # Correct Name
+async def set_chat_language(chat_id: str, language: str) -> bool:
     """Set the chat language in the database."""
     try:
         await db.set_chat_language(chat_id, language)
@@ -65,7 +65,7 @@ async def set_chat_language(chat_id: str, language: str) -> bool:  # Correct Nam
         logging.error(f"Failed to set chat language for chat {chat_id}: {e}")
         return False
 
-async def get_chat_language(chat_id: str) -> str:  # Correct Name
+async def get_chat_language(chat_id: str) -> str:
     """Get the chat language from the database."""
     try:
         language = await db.get_chat_language(chat_id)
@@ -73,10 +73,10 @@ async def get_chat_language(chat_id: str) -> str:  # Correct Name
         return language
     except Exception as e:
         logging.error(f"Failed to get chat language for chat {chat_id}: {e}")
-        logging.warning(f"Error getting language for {chat_id}. Defaulting to 'en'.")  # Add warning
+        logging.warning(f"Error getting language for {chat_id}. Defaulting to 'en'.")
         return "en"  # Default to English if there's an error
 
-async def set_group_game_mode(chat_id: str, game_modes: List[str]) -> bool:  # game_modes is a LIST
+async def set_group_game_mode(chat_id: str, game_modes: List[str]) -> bool:
     """Set the group game mode in the database."""
     try:
         await db.set_group_game_mode(chat_id, game_modes)  # Pass the LIST to db
@@ -86,7 +86,7 @@ async def set_group_game_mode(chat_id: str, game_modes: List[str]) -> bool:  # g
         logging.error(f"Failed to set group game mode for chat {chat_id}: {e}")
         return False
 
-async def get_group_game_mode(chat_id: str) -> List[str]:  # Returns a LIST
+async def get_group_game_mode(chat_id: str) -> List[str]:
     """Get the group game mode from the database."""
     try:
         game_modes = await db.get_group_game_mode(chat_id)  # Get the LIST from db
@@ -96,7 +96,6 @@ async def get_group_game_mode(chat_id: str) -> List[str]:  # Returns a LIST
         logging.error(f"Failed to get group game mode for chat {chat_id}: {e}")
         logging.warning(f"Error getting game mode for {chat_id}. Defaulting to ['easy'].")
         return ["easy"]  # Default to a LIST
-from mongo.users_and_chats import db
 
 async def update_user_score(chat_id: str, user_id: str, base_score: int, coins: int, xp: int):
     try:
@@ -106,7 +105,7 @@ async def update_user_score(chat_id: str, user_id: str, base_score: int, coins: 
         # If user_data is None, handle the case where the user is not found
         if user_data is None:
             logging.warning(f"User  {user_id} not found in chat {chat_id}. Registering user.")
-            await db.register_user(chat_id, user_id)  # Register the user if not found
+            await register_user(user_id, {"name": "New User"})  # Register the user if not found
             user_data = await db.get_user_score(chat_id, user_id)  # Retrieve the user data again
 
         # Update the user's score, coins, and XP
