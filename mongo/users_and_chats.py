@@ -214,7 +214,7 @@ class Database:
             await self.users_collection.insert_one(user_score)
             logging.info(f"User  {user_id} score added to chat {chat_id}.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
- await self.handle_db_error("add user score", user_id, e)
+             await self.handle_db_error("add user score", user_id, e)
 
     async def get_user_score(self, chat_id: str, user_id: str) -> Optional[dict]:
         """Retrieve a user's score, coins, and XP from the database."""
