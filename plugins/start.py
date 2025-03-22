@@ -91,12 +91,12 @@ async def handle_start_command(client, message, is_group: bool):
 
 # Command handler for /start in private messages
 @Client.on_message(filters.command("start") & filters.private)
-async def start_private_handler(client, message):
+async def start_private(client, message):
     await handle_start_command(client, message, is_group=False)
 
 # Command handler for /start in group messages
 @Client.on_message(filters.command("start") & filters.group)
-async def start_group_handler(client, message):
+async def start_group(client, message):
     await handle_start_command(client, message, is_group=True)
     
 @Client.on_callback_query()
