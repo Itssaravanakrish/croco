@@ -9,10 +9,5 @@ schedule>=1.1.0
 TgCrypto
 flask
 uvicorn
-moviepy==1.0.3
-Pillow
-yt-dlp
-requests
-fake-useragent
-beautifulsoup4
-opencv-python
+
+
