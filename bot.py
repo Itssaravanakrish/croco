@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import logging.config
 import sys
@@ -7,13 +8,13 @@ from aiohttp import web
 from plugins.web_support import web_server
 from mongo.users_and_chats import Database
 
-# Configure logging with error handling
+# Configure logging
 try:
     logging.config.fileConfig('logging.conf')
     logging.info("Logging configuration loaded successfully.")
 except Exception as e:
     print(f"Error loading logging configuration: {e}")
-    logging.basicConfig(level=logging.INFO)  # Fallback to basic logging if config fails
+    logging.basicConfig(level=logging.INFO)
 
 # Set logging levels
 logging.getLogger().setLevel(logging.INFO)
@@ -22,7 +23,7 @@ logging.getLogger("pyrogram").setLevel(logging.ERROR)
 class Bot(Client):
     def __init__(self):
         super().__init__(
-            "my_bot",  # This is the session name
+            "my_bot",
             api_id=API_ID,
             api_hash=API_HASH,
             bot_token=BOT_TOKEN,
@@ -34,17 +35,14 @@ class Bot(Client):
 
     async def start(self):
         try:
-            await self.database.connect()  # Ensure MongoDB connection is established
-            await super().start()  # Start the bot
-            me = await self.get_me()  # Get bot information
-            self.mention = me.mention  # Store mention format
-            self.username = me.username  # Store username
+            await self.database.connect()
+            await super().start()
+            me = await self.get_me()
+            self.mention = me.mention
+            self.username = me.username
 
-            # Notify log channel about the bot restart
             start_message = f"{me.first_name} ✅✅ BOT started successfully ✅✅"
-            logging.info(start_message)  # Log the bot start message
-
-            # Send the start message only after the bot is fully started
+            logging.info(start_message)
             await self.send_message(LOG_CHANNEL, start_message)
 
             # Example usage of Database
@@ -60,22 +58,21 @@ class Bot(Client):
             chat = await self.database.get_chat("456")
             logging.info(f"Retrieved chat: {chat}")
 
-            app = web.AppRunner(await web_server())  # Initialize the web server
-            await app.setup()  # Set up the web server
-            bind_address = "0.0.0.0"  # Bind to all interfaces
-            await web.TCPSite(app, bind_address, PORT).start()  # Start the web server
+            app = web.AppRunner(await web_server())
+            await app.setup()
+            bind_address = "0.0.0.0"
+            await web.TCPSite(app, bind_address, PORT).start()
             logging.info(f"Web server started on {bind_address}:{PORT}")
         except Exception as e:
             logging.error(f"Failed to start the bot: {e}")
-            # Only attempt to send a message if the bot has started
             if self.is_connected:
                 await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
-            sys.exit(1)  # Exit if the bot fails to start
+            sys.exit(1)
 
     async def stop(self, *args):
         try:
-            await self.database.close()  # Close the MongoDB connection
-            await super().stop()  # Stop the bot
+            await self.database.close()
+            await super().stop()
             logging.info("Bot Stopped 🙄")
             await self.send_message(LOG_CHANNEL, "Bot Stopped 🙄")
         except Exception as e:
@@ -85,4 +82,4 @@ class Bot(Client):
 # Create an instance of the Bot and run it
 if __name__ == "__main__":
     bot = Bot()
-    bot.run()
+    bot.run()  # This starts the bot and blocks the main thread
