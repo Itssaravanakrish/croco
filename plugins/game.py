@@ -179,7 +179,7 @@ async def game_action_callback(client, callback_query):
         try:
             game_mode = await db.get_group_game_mode(chat_id)
             if isinstance(game_mode, list) and game_mode:
- game_mode = game_mode[0]
+                 game_mode = game_mode[0]
             else:
                 logging.warning(f"No valid game mode found for chat_id: {chat_id}. Defaulting to 'easy'.")
                 game_mode = "easy"
