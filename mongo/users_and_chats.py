@@ -3,7 +3,6 @@ from typing import Dict, Any, Optional, List
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from config import MONGO_URI, MONGO_DB_NAME
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
-from pymongo.results import UpdateResult
 
 class UserNotFoundError(Exception):
     """Custom exception for user not found errors."""
@@ -96,11 +95,9 @@ class Database:
             logging.error(f"Error getting game count: {e}")
             return 0  # Return 0 if there's an error
 
-    async def handle_db_error(self, action: str, identifier: str, e: Exception, query: Optional[Dict] = None) -> None:
+    async def handle_db_error(self, action: str, identifier: str, e: Exception) -> None:
         """Handle database errors by logging and raising a custom exception."""
         log_message = f"Failed to {action} for {identifier}: {e}"
-        if query:
-            log_message += f" (Query: {query})"
         logging.error(log_message, exc_info=e)
         raise DatabaseConnectionError(log_message)
 
@@ -156,20 +153,16 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("remove game", chat_id, e)
 
-    async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> UpdateResult:
+    async def update_game(self, chat_id: str, update_data: Dict[str, Any]) -> None:
         """Update the game data for a specific chat."""
         try:
-            result = await self.games_collection.update_one(
+            await self.games_collection.update_one(
                 {"chat_id": chat_id},
                 {"$set": update_data}
             )
-            return result
+            logging.info(f"Game for chat {chat_id} has been updated.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("update game", chat_id, e)
-            raise
-        except Exception as e:
-            logging.error(f"Error in update_game: {e}")
-            raise
 
     # Chat management methods
     async def add_chat(self, chat_id: str, chat_data: Dict[str, Any]) -> None:
@@ -194,9 +187,6 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("get chat", chat_id, e)
             return None
-        except Exception as e:
-            logging.error(f"Error in get_chat: {e}")
-            return None
 
     async def update_chat(self, chat_id: str, chat_title: str) -> None:
         """Update the title of a chat."""
@@ -206,6 +196,7 @@ class Database:
                 {"$set": {"title": chat_title}},
                 upsert=True
             )
+            logging.info(f"Chat {chat_id} title updated to {chat_title}.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("update chat", chat_id, e)
 
@@ -221,15 +212,15 @@ class Database:
         }
         try:
             await self.users_collection.insert_one(user_score)
-            logging.info(f"User   {user_id} score added to chat {chat_id}.")
+            logging.info(f"User  {user_id} score added to chat {chat_id}.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
-            await self.handle_db_error("add user score", user_id, e)
+ await self.handle_db_error("add user score", user_id, e)
 
     async def get_user_score(self, chat_id: str, user_id: str) -> Optional[dict]:
         """Retrieve a user's score, coins, and XP from the database."""
         user_score = await self.users_collection.find_one({"chat_id": chat_id, "user_id": user_id})
         if user_score is None:
-            raise UserNotFoundError(f"User    {user_id} not found in chat {chat_id}.")
+            raise UserNotFoundError(f"User  {user_id} not found in chat {chat_id}.")
         return user_score
 
     async def update_user_score(self, chat_id: str, user_id: str, score: int, coins: int, xp: int) -> None:
@@ -244,7 +235,7 @@ class Database:
                 }},
                 upsert=True  # Create a new entry if it doesn't exist
             )
-            logging.info(f"User    {user_id} score updated in chat {chat_id}.")
+            logging.info(f"User  {user_id} score updated in chat {chat_id}.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("update user score", user_id, e)
 
@@ -262,7 +253,7 @@ class Database:
         """Retrieve the top users based on their scores in a specific chat."""
         top_users = await self.users_collection.find({"chat_id": chat_id}).sort("score", -1).limit(limit).to_list()
         return top_users
-        
+
     # Group language management methods
     async def set_chat_language(self, chat_id: str, language: str) -> None:
         """Set the language for a specific chat."""
