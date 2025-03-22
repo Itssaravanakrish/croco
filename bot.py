@@ -35,6 +35,7 @@ class Bot(Client):
     async def start(self):
         try:
             await self.database.connect()  # Ensure MongoDB connection is established
+            await self.database.initialize_database()  # Initialize the database if needed
             await super().start()  # Start the bot
             me = await self.get_me()  # Get bot information
             self.mention = me.mention  # Store mention format
@@ -44,7 +45,7 @@ class Bot(Client):
             start_message = f"{me.first_name} ✅✅ BOT started successfully ✅✅"
             logging.info(start_message)  # Log the bot start message
 
-            # Only send message to LOG_CHANNEL after successful start
+            # Send message to LOG_CHANNEL after successful start
             await self.send_message(LOG_CHANNEL, start_message)
 
             # Example usage of Database
@@ -67,9 +68,10 @@ class Bot(Client):
             logging.info(f"Web server started on {bind_address}:{PORT}")
         except Exception as e:
             logging.error(f"Failed to start the bot: {e}")
-            # Only send message if the bot has started successfully
-            if self.is_connected:
+            try:
                 await self.send_message(LOG_CHANNEL, f"Failed to start the bot: {e}")
+            except Exception as send_error:
+                logging.error(f"Failed to send error message to log channel: {send_error}")
             sys.exit(1)  # Exit if the bot fails to start
 
     async def stop(self, *args):
@@ -80,7 +82,10 @@ class Bot(Client):
             await self.send_message(LOG_CHANNEL, "Bot Stopped 🙄")
         except Exception as e:
             logging.error(f"Failed to stop the bot: {e}")
-            await self.send_message(LOG_CHANNEL, f"Failed to stop the bot: {e}")
+            try:
+                await self.send_message(LOG_CHANNEL, f"Failed to stop the bot: {e}")
+            except Exception as send_error:
+                logging.error(f"Failed to send stop message to log channel: {send_error}")
 
 # Create an instance of the Bot and run it
 if __name__ == "__main__":
