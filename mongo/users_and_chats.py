@@ -39,6 +39,33 @@ class Database:
         await self.client.close()  # Ensure to await the close operation
         logging.info("Database connection closed.")
 
+    async def initialize_database(self) -> None:
+        """Initialize the database by creating a default user or chat if none exist."""
+        # Check if any users exist
+        user_count = await self.users_collection.count_documents({})
+        if user_count == 0:
+            default_user = {
+                "user_id": "default_user",
+                "name": "Default User",
+                "score": 0,
+                "coins": 0,
+                "xp": 0
+            }
+            await self.users_collection.insert_one(default_user)
+            logging.info("Default user created in the database.")
+
+        # Check if any chats exist
+        chat_count = await self.chats_collection.count_documents({})
+        if chat_count == 0:
+            default_chat = {
+                "chat_id": "default_chat",
+                "title": "Default Chat",
+                "language": "en",
+                "game_mode": ["easy"]
+            }
+            await self.chats_collection.insert_one(default_chat)
+            logging.info("Default chat created in the database.")
+
     async def get_user_count(self) -> int:
         """Retrieve the count of users in the database."""
         try:
