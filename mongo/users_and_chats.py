@@ -36,7 +36,7 @@ class Database:
 
     async def close(self) -> None:
         """Close the database connection."""
-        self.client.close()
+        await self.client.close()  # Ensure to await the close operation
         logging.info("Database connection closed.")
 
     async def get_user_count(self) -> int:
@@ -92,7 +92,7 @@ class Database:
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add user", user_id, e)
 
-    async def get_user(self, user_id: str ) -> dict:
+    async def get_user(self, user_id: str) -> dict:
         """Retrieve a user from the database by user ID."""
         user = await self.users_collection.find_one({"user_id": user_id})
         if user is None:
@@ -194,7 +194,7 @@ class Database:
         }
         try:
             await self.users_collection.insert_one(user_score)
-            logging.info(f"User  {user_id} score added to chat {chat_id}.")
+            logging.info(f"User   {user_id} score added to chat {chat_id}.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("add user score", user_id, e)
 
@@ -202,7 +202,7 @@ class Database:
         """Retrieve a user's score, coins, and XP from the database."""
         user_score = await self.users_collection.find_one({"chat_id": chat_id, "user_id": user_id})
         if user_score is None:
-            raise UserNotFoundError(f"User   {user_id} not found in chat {chat_id}.")
+            raise UserNotFoundError(f"User    {user_id} not found in chat {chat_id}.")
         return user_score
 
     async def update_user_score(self, chat_id: str, user_id: str, score: int, coins: int, xp: int) -> None:
@@ -217,7 +217,7 @@ class Database:
                 }},
                 upsert=True  # Create a new entry if it doesn't exist
             )
-            logging.info(f"User   {user_id} score updated in chat {chat_id}.")
+            logging.info(f"User    {user_id} score updated in chat {chat_id}.")
         except (ServerSelectionTimeoutError, ConfigurationError) as e:
             await self.handle_db_error("update user score", user_id, e)
 
