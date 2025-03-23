@@ -1,11 +1,10 @@
 import logging
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram import Client, filters
 from mongo.users_and_chats import db
 from utils import get_message, register_user, is_user_admin
 from plugins.game import inline_keyboard_markup
 from script import Language
-from buttons import get_settings_keyboard, get_language_keyboard, get_game_mode_keyboard, get_game_keyboard
+from buttons import get_settings_keyboard, get_language_keyboard, get_game_mode_keyboard, get_game_keyboard, get_inline_keyboard_pm
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -23,18 +22,19 @@ async def start_command(client, message):
         chat_id = str(message.chat.id) if message.chat.type in ["group", "supergroup"] else None
         logging.info(f"/start command received from user {user_id} in {'group' if chat_id else 'private chat'}.")
 
+        # Register user
+        if not await register_user(user_id, user_data):
+            await message.reply_text(await get_message(Language.EN, "error_registering_user"))
+            return
+
         if chat_id:
             # Group context
             group_language = await db.get_chat_language(chat_id)
             welcome_message = await get_message(group_language, "welcome_new_group")
-            await message.reply_text(welcome_message, reply_markup=settings_keyboard)
+            await message.reply_text(welcome_message, reply_markup=get_settings_keyboard())  # Use settings keyboard for groups
         else:  # Private chat
-            # Register user
-            if not await register_user(user_id, user_data):
-                await message.reply_text(await get_message(Language.EN, "error_registering_user"))
-                return
-
-            await message.reply_text("Welcome!to a group.")
+            # Send welcome message with inline keyboard for private messages
+            await message.reply_text("Welcome! Use the buttons below:", reply_markup=get_inline_keyboard_pm())  # Use the same inline keyboard
 
     except Exception as e:
         logging.exception(f"Error in start_command: {e}")
