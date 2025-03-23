@@ -24,7 +24,7 @@ inline_keyboard_markup = InlineKeyboardMarkup(
     ]
 )
 
-async def new_game(client, message, language, game_mode: str) -> bool:
+async def new_game(client, message, language, game_mode: str, host_id: int) -> bool:
     try:
         if isinstance(game_mode, list):
             game_mode = game_mode[0]
@@ -32,7 +32,6 @@ async def new_game(client, message, language, game_mode: str) -> bool:
         word = choice(game_mode)  
         logging.info(f"Selected word for game mode '{game_mode}': {word}")
 
-        host_id = message.from_user.id  # The user who initiated the game
         bot_info = await client.get_me()
         bot_id = bot_info.id
 
@@ -206,9 +205,15 @@ async def choose_leader_callback(client, callback_query):
         language = Language.EN
 
     try:
+        game = await db.get_game(chat_id)
+        if game:
+            logging.warning(f"Game already ongoing for chat {chat_id}. Cannot choose a new leader.")
+            await callback_query.answer("A game is already ongoing. Please end the game first.", show_alert=True)
+            return
+
         game_mode = await db.get_group_game_mode(chat_id)
         if not game_mode:
-            logging.warning(f"No game mode found for chat {chat_id}. Defaulting to 'Easy'.")
+            logging.warning(f"No game mode found for chat {chat_id}. Defaulting to 'easy'.")
             game_mode = "easy"
     except Exception as e:
         logging.error(f"Error retrieving game mode for chat {chat_id}: {e}")
@@ -217,7 +222,7 @@ async def choose_leader_callback(client, callback_query):
 
     try:
         # Set the clicked user as the host
-        await new_game(client, callback_query.message, language, game_mode)
+        await new_game(client, callback_query.message, language, game_mode, user_id)  # Pass user_id as host
         await callback_query.answer(f"{callback_query.from_user.first_name} is now the leader! Starting the game...")
     except Exception as e:
         logging.error(f"Error starting new game for chat {chat_id}: {e}")
