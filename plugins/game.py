@@ -6,6 +6,7 @@ from words import choice
 from mongo.users_and_chats import db
 from utils import get_message, is_user_admin, update_user_score
 from script import Language
+from buttons import get_game_keyboard, get_leader_keyboard
 
 # Basic logging configuration
 logging.basicConfig(
@@ -15,22 +16,6 @@ logging.basicConfig(
 
 CMD = ["/", "."]
 GAME_TIMEOUT = 300
-
-# Inline keyboard for word actions with a Settings button
-inline_keyboard_markup = InlineKeyboardMarkup(
-    [
-        [
-            InlineKeyboardButton("See Word 👀", callback_data="view"),
-            InlineKeyboardButton("Next Word 🔄", callback_data="next")
-        ],
-        [
-            InlineKeyboardButton("Settings ⚙️", callback_data="settings")  # New Settings button
-        ],
-        [
-            InlineKeyboardButton("I Don't Want To Be A Leader 🙅‍♂️", callback_data="end_game")
-        ]
-    ]
-)
 
 async def new_game(client, message, language, game_mode: str, host_id: int) -> bool:
     try:
@@ -67,7 +52,7 @@ async def new_game(client, message, language, game_mode: str, host_id: int) -> b
 
         await message.reply_text(
             await get_message(language.value, "game_started", name=host_user.first_name, mode=game_mode, lang=language.value),  # Use host's name
-            reply_markup=inline_keyboard_markup
+            reply_markup=get_game_keyboard()
         )
         return True
     except Exception as e:
@@ -249,13 +234,9 @@ async def handle_end_game(client, message, language):
     try:
         await db.remove_game(message.chat.id)
         
-        inline_keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("I Want To Be A Leader 🙋‍♂️", callback_data="choose_leader")]]
-        )
-        
         await message.reply_text(
             await get_message(language, "choose_leader"),
-            reply_markup=inline_keyboard
+            reply_markup=get_leader_keyboard()
         )
     except Exception as e:
         logging.error(f"Error removing game from database: {e}")
