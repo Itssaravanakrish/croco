@@ -83,7 +83,8 @@ async def check_answer(client, message, game, language):
                 await message.reply_text(await get_message(language, "dont_tell_answer"))
             else:
                 await update_user_score(chat_id, user_id, base_score=10, coins=5, xp=20)
-                
+
+                await message.reply_sticker("CAACAgUAAx0CfU1WbQACBoBn36yAzLKr3Nxus9VV-4M6PDzR2gACBxQAAtRhGFVrCBGR0bqOOB4E")
                 await message.reply_text(
                     await get_message(language, "correct_answer", winner=winner_name)
                 )
@@ -114,7 +115,7 @@ async def game_command(client, message):
 
     game_mode = await db.get_group_game_mode(chat_id)
     await new_game(client, message, language, game_mode, message.from_user.id)  # Pass host_id
-    await message.reply_text(await get_message(language, "new_game_started"))
+#    await message.reply_text(await get_message(language, "new_game_started"))
 
 @Client.on_message(filters.group)
 async def group_message_handler(client, message):
@@ -193,7 +194,7 @@ async def game_action_callback(client, callback_query):
     elif callback_query.data == "end_game":
         await handle_end_game(client, callback_query.message, language)
         await callback_query.message.delete()
-        await client.send_message(chat_id, await get_message(language, "game_ended"))
+#        await client.send_message(chat_id, await get_message(language, "game_ended"))
         await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
 
 @Client.on_callback_query(filters.regex("choose_leader"))
