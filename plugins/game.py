@@ -16,11 +16,19 @@ logging.basicConfig(
 CMD = ["/", "."]
 GAME_TIMEOUT = 300
 
+# Inline keyboard for word actions with a Settings button
 inline_keyboard_markup = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton("See Word 👀", callback_data="view"),
-         InlineKeyboardButton("Next Word 🔄", callback_data="next")],
-        [InlineKeyboardButton("I Don't Want To Be A Leader 🙅‍♂️", callback_data="end_game")]
+        [
+            InlineKeyboardButton("See Word 👀", callback_data="view"),
+            InlineKeyboardButton("Next Word 🔄", callback_data="next")
+        ],
+        [
+            InlineKeyboardButton("Settings ⚙️", callback_data="settings")  # New Settings button
+        ],
+        [
+            InlineKeyboardButton("I Don't Want To Be A Leader 🙅‍♂️", callback_data="end_game")
+        ]
     ]
 )
 
