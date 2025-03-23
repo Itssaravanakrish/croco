@@ -5,14 +5,14 @@ def get_game_keyboard():
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("See Word 👀", callback_data="view"),
-                InlineKeyboardButton("Next Word 🔄", callback_data="next")
+                InlineKeyboardButton("ꜱᴇᴇ ᴡᴏʀᴅ 👀", callback_data="view"),
+                InlineKeyboardButton("ɴᴇxᴛ ᴡᴏʀᴅ 🔄", callback_data="next")
             ],
             [
-                InlineKeyboardButton("Settings ⚙️", callback_data="settings")
+                InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ ᴏᴜʀ ᴄʜᴀɴɴᴇʟ 💖", url="https://t.me/TownBus")
             ],
             [
-                InlineKeyboardButton("I Don't Want To Be A Leader 🙅‍♂️", callback_data="end_game")
+                InlineKeyboardButton("ɪ ᴅᴏɴ'ᴛ ᴡᴀɴᴛ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ 🙅‍♂️", callback_data="end_game")
             ]
         ]
     )
@@ -53,7 +53,7 @@ def get_leader_keyboard():
     """Returns the inline keyboard for choosing a leader."""
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("I Want To Be A Leader 🙋‍♂️", callback_data="choose_leader")]
+            [InlineKeyboardButton("ɪ ᴅᴏɴ'ᴛ ᴡᴀɴᴛ ᴛᴏ ʙᴇ ᴀ ʟᴇᴀᴅᴇʀ 🙋‍♂️", callback_data="choose_leader")]
         ]
     )
     
@@ -63,11 +63,11 @@ def get_inline_keyboard_pm():
         [
             [
                 InlineKeyboardButton(
-                    "Add Me to Your Group 👥",
+                    "ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 👥",
                     url="https://t.me/Crocodile_game_enBot?startgroup=true",
                 )
             ],
-            [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/TownBus")],
-            [InlineKeyboardButton("Close ❌", callback_data="close_settings")],
+            [InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ ᴏᴜʀ ᴄʜᴀɴɴᴇʟ 💖", url="https://t.me/TownBus")],
+            [InlineKeyboardButton("ᴄʟᴏꜱᴇ ❌", callback_data="close_settings")],
         ]
     )
