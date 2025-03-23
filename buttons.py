@@ -56,3 +56,18 @@ def get_leader_keyboard():
             [InlineKeyboardButton("I Want To Be A Leader 🙋‍♂️", callback_data="choose_leader")]
         ]
     )
+    
+def get_inline_keyboard_pm():
+    """Returns the inline keyboard for private messages."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "Add Me to Your Group 👥",
+                    url="https://t.me/Crocodile_game_enBot?startgroup=true",
+                )
+            ],
+            [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/TownBus")],
+            [InlineKeyboardButton("Close ❌", callback_data="close_settings")],
+        ]
+    )
