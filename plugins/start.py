@@ -1,29 +1,13 @@
 import logging
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatMemberUpdated  # Correct import for pyrogram types
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram import Client, filters
-from mongo.users_and_chats import db  # Replace with your actual module path
-from utils import get_message, register_user, register_chat, is_user_admin  # Replace with your actual module path
-from script import Language  # Replace with your actual module path
+from mongo.users_and_chats import db
+from utils import get_message, register_user, is_user_admin
+from script import Language
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 CMD = ["/", "."]
-
-user_states = {}  # Dictionary to track user states
-
-# Inline keyboard for both private and group messages
-inline_keyboard_markup = InlineKeyboardMarkup(
-    [
-        [
-            InlineKeyboardButton(
-                "Add Me to Your Group 👥",
-                url="https://t.me/Crocodile_game_enBot?startgroup=true",
-            )
-        ],
-        [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/TownBus")],
-        [InlineKeyboardButton("Close ❌", callback_data="close_settings")],
-    ]
-)
 
 @Client.on_message(filters.command("start"))
 async def start_command(client, message):
@@ -39,12 +23,12 @@ async def start_command(client, message):
 
         if chat_id:
             # Group context
-            group_language = await db.get_chat_language(chat_id)  # Assuming this function exists
-            welcome_message = await get_message(group_language, "welcome_new_group")  # Assuming this function exists
+            group_language = await db.get_chat_language(chat_id)
+            welcome_message = await get_message(group_language, "welcome_new_group")
             await message.reply_text(welcome_message, reply_markup=settings_keyboard)
         else:  # Private chat
             # Register user
-            if not await register_user(user_id, user_data):  # Assuming this function exists
+            if not await register_user(user_id, user_data):
                 await message.reply_text(await get_message(Language.EN, "error_registering_user"))
                 return
 
@@ -62,7 +46,7 @@ async def settings_callback(client, callback_query):
     chat_id = callback_query.message.chat.id
 
     # Check if the user is an admin
-    is_admin = await is_user_admin(client, chat_id, user_id)  # Assuming this function checks if the user is an admin
+    is_admin = await is_user_admin(client, chat_id, user_id)
 
     if is_admin:
         # Create settings keyboard for admins
@@ -70,13 +54,12 @@ async def settings_callback(client, callback_query):
             [
                 [InlineKeyboardButton("Change Language 🌐", callback_data="change_language")],
                 [InlineKeyboardButton("Change Game Mode 🎮", callback_data="change_game_mode")],
-                [InlineKeyboardButton("Back to the Game 🎮", callback_data="back_to_game")],
+                [InlineKeyboardButton("Close ❌", callback_data="close_settings")],  # Close button
             ]
         )
 
         await callback_query.message.reply_text("Settings options:", reply_markup=settings_keyboard)
     else:
-        # Inform the user they do not have permission to access settings
         await callback_query.answer("You do not have permission to access settings.", show_alert=True)
 
 @Client.on_callback_query(filters.regex("change_language"))
@@ -99,7 +82,7 @@ async def change_language_callback(client, callback_query):
             [InlineKeyboardButton("English 🇬🇧", callback_data="set_language_en")],
             [InlineKeyboardButton("Tamil 🇮🇳", callback_data="set_language_ta")],
             [InlineKeyboardButton("Hindi 🇮🇳", callback_data="set_language_hi")],
-            [InlineKeyboardButton("Back 🔙", callback_data="back_settings")],
+            [InlineKeyboardButton("Back 🔙", callback_data="back_to_settings_language")],  # Back button
         ]
     )
 
@@ -125,9 +108,11 @@ async def set_language_callback(client, callback_query):
     except Exception as e:
         logging.exception(f"Error setting language: {e}")
         await callback_query.answer("An error occurred while setting the language. Please try again.", show_alert=True)
-        
+
 @Client.on_callback_query(filters.regex("change_game_mode"))
-async def change_game_mode_callback(client, callback_query):
+async def change_game_mode_callback(client , callback_query):
+    await callback_query.answer()  # Acknowledge button press
+
     user_id = callback_query.from_user.id
     chat_id = callback_query.message.chat.id
 
@@ -144,7 +129,7 @@ async def change_game_mode_callback(client, callback_query):
             [InlineKeyboardButton("Easy 😌", callback_data="set_game_mode_easy")],
             [InlineKeyboardButton("Hard 😤", callback_data="set_game_mode_hard")],
             [InlineKeyboardButton("Adult 🔞", callback_data="set_game_mode_adult")],
-            [InlineKeyboardButton("Back 🔙", callback_data="back_settings")],
+            [InlineKeyboardButton("Back 🔙", callback_data="back_to_settings_game_mode")],  # Back button
         ]
     )
 
@@ -171,10 +156,13 @@ async def set_game_mode_callback(client, callback_query):
         logging.exception(f"Error setting game mode: {e}")
         await callback_query.answer("An error occurred while setting the game mode. Please try again.", show_alert=True)
 
-@Client.on_callback_query(filters.regex("back_settings"))
-async def back_settings_callback(client, callback_query):
-    await callback_query.answer()  # Acknowledge button press
-    await settings_command(client, callback_query.message)
+@Client.on_callback_query(filters.regex("back_to_settings_language"))
+async def back_to_settings_language_callback(client, callback_query):
+    await settings_callback(client, callback_query)
+
+@Client.on_callback_query(filters.regex("back_to_settings_game_mode"))
+async def back_to_settings_game_mode_callback(client, callback_query):
+    await settings_callback(client, callback_query)
 
 @Client.on_callback_query(filters.regex("close_settings"))
 async def close_settings_callback(client, callback_query):
