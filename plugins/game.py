@@ -40,12 +40,15 @@ async def new_game(client, message, language, game_mode: str, host_id: int) -> b
             logging.warning("The bot cannot be the host of the game.")
             return False
 
+        # Retrieve the host's user information
+        host_user = await client.get_users(host_id)
+
         game_data = {
             'start': time(),
             'host': {
                 'id': host_id,
-                'first_name': message.from_user.first_name,
-                'username': message.from_user.username,
+                'first_name': host_user.first_name,  # Use the host's first name
+                'username': host_user.username,
             },
             'word': word,
             'game_mode': game_mode,
@@ -55,7 +58,7 @@ async def new_game(client, message, language, game_mode: str, host_id: int) -> b
         await db.set_game(message.chat.id, game_data)
 
         await message.reply_text(
-            await get_message(language.value, "game_started", name=message.from_user.first_name, mode=game_mode, lang=language.value),
+            await get_message(language.value, "game_started", name=host_user.first_name, mode=game_mode, lang=language.value),  # Use host's name
             reply_markup=inline_keyboard_markup
         )
         return True
