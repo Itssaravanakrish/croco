@@ -32,10 +32,11 @@ async def new_game(client, message, language, game_mode: str) -> bool:
         word = choice(game_mode)  
         logging.info(f"Selected word for game mode '{game_mode}': {word}")
 
+        host_id = message.from_user.id  # The user who initiated the game
         bot_info = await client.get_me()
         bot_id = bot_info.id
 
-        host_id = message.from_user.id
+        # Check if the host is the bot itself
         if host_id == bot_id:
             logging.warning("The bot cannot be the host of the game.")
             return False
