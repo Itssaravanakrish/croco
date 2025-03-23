@@ -115,7 +115,6 @@ async def game_command(client, message):
 
     game_mode = await db.get_group_game_mode(chat_id)
     await new_game(client, message, language, game_mode, message.from_user.id)  # Pass host_id
-#    await message.reply_text(await get_message(language, "new_game_started"))
 
 @Client.on_message(filters.group)
 async def group_message_handler(client, message):
@@ -168,6 +167,13 @@ async def game_action_callback(client, callback_query):
         await callback_query.message.edit_text(await get_message(language, "game_timed_out"))
         return
 
+    host_id = game.get("host", {}).get("id")  # Get the host ID
+
+    # Check if the user is the host
+    if user_id != host_id:
+        await callback_query.answer("Only the host can use this button.", show_alert=True)
+        return
+
     if callback_query.data == "view":
         word = game['word']
         await callback_query.answer(await get_message(language, "current_word", word=word), show_alert=True)
@@ -194,7 +200,6 @@ async def game_action_callback(client, callback_query):
     elif callback_query.data == "end_game":
         await handle_end_game(client, callback_query.message, language)
         await callback_query.message.delete()
-#        await client.send_message(chat_id, await get_message(language, "game_ended"))
         await callback_query.answer(await get_message(language, "game_ended_confirmation"), show_alert=True)
 
 @Client.on_callback_query(filters.regex("choose_leader"))
