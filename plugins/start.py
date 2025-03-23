@@ -4,11 +4,12 @@ from pyrogram import Client, filters
 from mongo.users_and_chats import db  # Replace with your actual module path
 from utils import get_message, register_user, register_chat, is_user_admin  # Replace with your actual module path
 from script import Language  # Replace with your actual module path
-from words import get_word_list, choice  # Import from words.py
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 CMD = ["/", "."]
+
+user_states = {}  # Dictionary to track user states
 
 # Inline keyboard for both private and group messages
 inline_keyboard_markup = InlineKeyboardMarkup(
@@ -35,10 +36,6 @@ settings_keyboard = InlineKeyboardMarkup(
 
 @Client.on_message(filters.command("start"))
 async def start_command(client, message):
-    logging.info(f"/start command received in {'group' if message.chat.type in ['group', 'supergroup'] else 'private chat'} chat {message.chat.id} from user {message.from_user.id}.")
-    await handle_start_command(client, message)
-
-async def handle_start_command(client, message):
     user_id = str(message.from_user.id)
     user_data = {
         "first_name": message.from_user.first_name,
@@ -49,61 +46,54 @@ async def handle_start_command(client, message):
         chat_id = str(message.chat.id) if message.chat.type in ["group", "supergroup"] else None
         logging.info(f"/start command received from user {user_id} in {'group' if chat_id else 'private chat'}.")
 
-        # Register user or chat based on context
         if chat_id:
             # Group context
-            group_language = await db.get_chat_language(chat_id)
-            logging.info(f"Group language retrieved: {group_language}")
-
-            # Register the chat if it hasn't been registered yet
-            chat_data = {"title": message.chat.title, "type": message.chat.type.name}
-            if not await register_chat(chat_id, chat_data):
-                await message.reply_text(await get_message(group_language, "error_registering_chat"))
-                return
-            
-            # Use the existing welcome message for groups
-            welcome_message = await get_message(group_language, "welcome_new_group")
-            if welcome_message is None:
-                logging.warning(f"Welcome message not found for language: {group_language}")
-                await message.reply_text("Welcome message not found.")
-                return
-            
-            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup)
-
+            group_language = await db.get_chat_language(chat_id)  # Assuming this function exists
+            welcome_message = await get_message(group_language, "welcome_new_group")  # Assuming this function exists
+            await message.reply_text(welcome_message, reply_markup=settings_keyboard)
         else:  # Private chat
             # Register user
-            if not await register_user(user_id, user_data):
+            if not await register_user(user_id, user_data):  # Assuming this function exists
                 await message.reply_text(await get_message(Language.EN, "error_registering_user"))
                 return
 
-            # Use the existing welcome message for private chats
-            welcome_message = await get_message(Language.EN, "welcome")
-            await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup)
+            await message.reply_text("Welcome! Use /connect to connect to a group.")
 
     except Exception as e:
-        logging.exception(f"Error in handle_start_command: {e}")
-        await message.reply_text(await get_message(Language.EN, "error_processing_command"))
+        logging.exception(f"Error in start_command: {e}")
+        await message.reply_text("An error occurred. Please try again.")
 
 @Client.on_message(filters.command("settings"))
 async def settings_command(client, message):
     if message.chat.type not in ["group", "supergroup"]:
-        # Prompt user to connect if in private chat
         await message.reply_text("You need to connect to a group to change settings. Use /connect to connect.")
         return
 
-    # Send settings options if in a group
     await message.reply_text("Please choose an option:", reply_markup=settings_keyboard)
 
 @Client.on_message(filters.command("connect"))
 async def connect_command(client, message):
+    user_id = str(message.from_user.id)
+
     if message.chat.type == "private":
         # In private chat, ask for group ID or link
         await message.reply_text("Please provide the group ID or link to connect.")
+        user_states[user_id] = "awaiting_group_id"  # Set state to awaiting input
     else:
         # In group chat, connect the user directly
-        user_id = message.from_user.id
         chat_id = message.chat.id
         await message.reply_text("You have been connected to this group.")
+        # Here you can implement logic to store the connection
+
+@Client.on_message(filters.text)
+async def handle_group_id_input(client, message):
+    user_id = str(message.from_user.id)
+    if user_id in user_states and user_states[user_id] == "awaiting_group_id":
+        group_id_or_link = message.text
+        # Validate the group ID or link here
+        await message.reply_text(f"You have been connected to the group: {group_id_or_link}.")
+        # Store the connection logic here
+        del user_states[user_id]  # Clear the user's state
 
 @Client.on_callback_query(filters.regex("change_language"))
 async def change_language_callback(client, callback_query):
