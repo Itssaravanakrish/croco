@@ -19,7 +19,7 @@ inline_keyboard_markup_pm = InlineKeyboardMarkup(
                 url="https://t.me/Crocodile_game_enBot?startgroup=true",
             )
         ],
-        [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/xTamilChat")],
+        [InlineKeyboardButton("Support Our Group 💖", url="https://t.me/TownBus")],
         [InlineKeyboardButton("Close ❌", callback_data="close")],
     ]
 )
@@ -34,7 +34,7 @@ inline_keyboard_markup_grp = InlineKeyboardMarkup(
         ],
         [
             InlineKeyboardButton(
-                "Support Our Group 💖", url="https://t.me/Xtamilchat"
+                "Support Our Group 💖", url="https://t.me/TownBus"
             )
         ],
         [InlineKeyboardButton("Settings ⚙️", callback_data="settings"),
@@ -42,7 +42,12 @@ inline_keyboard_markup_grp = InlineKeyboardMarkup(
     ]
 )
 
-async def handle_start_command(client, message, is_group: bool):
+
+@Client.on_message(filters.command("start"))
+async def start_command(client, message):
+    await handle_start_command(client, message)
+
+async def handle_start_command(client, message):
     user_id = str(message.from_user.id)
     user_data = {
         "first_name": message.from_user.first_name,
@@ -50,11 +55,12 @@ async def handle_start_command(client, message, is_group: bool):
     }
 
     try:
-        if is_group:
-            chat_id = str(message.chat.id)
-            logging.info(f"/start command received in group chat {chat_id} from user {user_id}.")
+        chat_id = str(message.chat.id) if message.chat.type in ["group", "supergroup"] else None
+        logging.info(f"/start command received from user {user_id} in {'group' if chat_id else 'private chat'}.")
 
-            # Retrieve the group language
+        # Register user or chat based on context
+        if chat_id:
+            # Group context
             group_language = await db.get_chat_language(chat_id)
             logging.info(f"Group language retrieved: {group_language}")
 
@@ -74,8 +80,6 @@ async def handle_start_command(client, message, is_group: bool):
             await message.reply_text(welcome_message, reply_markup=inline_keyboard_markup_grp)
 
         else:  # Private chat
-            logging.info(f"/start command received in private chat from user {user_id}.")
-
             # Register user
             if not await register_user(user_id, user_data):
                 await message.reply_text(await get_message(Language.EN, "error_registering_user"))
@@ -88,12 +92,6 @@ async def handle_start_command(client, message, is_group: bool):
     except Exception as e:
         logging.exception(f"Error in handle_start_command: {e}")
         await message.reply_text(await get_message(Language.EN, "error_processing_command"))
-
-# Command handler for /start in private messages
-@Client.on_message(filters.command("start"))
-async def start_private(client: Client, message: Message):
-    await handle_start_command(client, message)
-
 
 @Client.on_callback_query()
 async def button_callback(Client, callback_query):
