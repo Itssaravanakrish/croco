@@ -2,7 +2,6 @@ import logging
 from pyrogram import Client, filters
 from mongo.users_and_chats import db
 from utils import get_message, register_user, is_user_admin
-from plugins.game import inline_keyboard_markup
 from script import Language
 from buttons import get_settings_keyboard, get_language_keyboard, get_game_mode_keyboard, get_game_keyboard, get_inline_keyboard_pm
 
