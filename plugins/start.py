@@ -3,6 +3,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram import Client, filters
 from mongo.users_and_chats import db
 from utils import get_message, register_user, is_user_admin
+from plugins.game import inline_keyboard_markup
 from script import Language
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -54,13 +55,32 @@ async def settings_callback(client, callback_query):
             [
                 [InlineKeyboardButton("Change Language 🌐", callback_data="change_language")],
                 [InlineKeyboardButton("Change Game Mode 🎮", callback_data="change_game_mode")],
-                [InlineKeyboardButton("Close ❌", callback_data="close_settings")],  # Close button
+                [InlineKeyboardButton("Back to Game 🎮", callback_data="back_to_game")],  # Back to Game button
             ]
         )
 
-        await callback_query.message.reply_text("Settings options:", reply_markup=settings_keyboard)
+        await callback_query.message.edit_text("Settings options:", reply_markup=settings_keyboard)
     else:
         await callback_query.answer("You do not have permission to access settings.", show_alert=True)
+
+@Client.on_callback_query(filters.regex("back_to_game"))
+async def back_to_game_callback(client, callback_query):
+    await callback_query.answer()  # Acknowledge button press
+    chat_id = callback_query.message.chat.id
+
+    try:
+        # Retrieve the ongoing game from the database
+        game = await db.get_game(chat_id)
+
+        if not game:
+            await callback_query.message.edit_text("No ongoing game found. Please start a new game.")
+            return
+
+        # If there is an ongoing game, show the current game state
+        await callback_query.message.edit_text("You are back in the game!", reply_markup=inline_keyboard_markup)
+    except Exception as e:
+        logging.error(f"Error retrieving game from database: {e}")
+        await callback_query.message.edit_text("An error occurred while trying to return to the game.")
 
 @Client.on_callback_query(filters.regex("change_language"))
 async def change_language_callback(client, callback_query):
