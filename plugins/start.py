@@ -90,12 +90,12 @@ async def handle_start_command(client, message, is_group: bool):
         await message.reply_text(await get_message(Language.EN, "error_processing_command"))
 
 # Command handler for /start in private messages
-@Client.on_message(filters.command("start") & filters.private)
+@Client.on_message(filters.command("start"))
 async def start_private(client: Client, message: Message):
     await handle_start_command(client, message, is_group=False)
 
 # Command handler for /start in group messages
-@Client.on_message(filters.command("start") & filters.group)
+@Client.on_message(filters.command("start"))
 async def start_group(client: Client, message: Message):
     await handle_start_command(client, message, is_group=True)
     
