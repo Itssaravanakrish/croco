@@ -5,6 +5,7 @@ from mongo.users_and_chats import db
 from utils import get_message, register_user, is_user_admin
 from plugins.game import inline_keyboard_markup
 from script import Language
+from buttons import get_settings_keyboard, get_language_keyboard, get_game_mode_keyboard, get_game_keyboard
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -33,7 +34,7 @@ async def start_command(client, message):
                 await message.reply_text(await get_message(Language.EN, "error_registering_user"))
                 return
 
-            await message.reply_text("Welcome! Use /connect to connect to a group.")
+            await message.reply_text("Welcome!to a group.")
 
     except Exception as e:
         logging.exception(f"Error in start_command: {e}")
@@ -50,15 +51,7 @@ async def settings_callback(client, callback_query):
     is_admin = await is_user_admin(client, chat_id, user_id)
 
     if is_admin:
-        # Create settings keyboard for admins
-        settings_keyboard = InlineKeyboardMarkup(
-            [
-                [InlineKeyboardButton("Change Language 🌐", callback_data="change_language")],
-                [InlineKeyboardButton("Change Game Mode 🎮", callback_data="change_game_mode")],
-                [InlineKeyboardButton("Back to Game 🎮", callback_data="back_to_game")],  # Back to Game button
-            ]
-        )
-
+        settings_keyboard = get_settings_keyboard()  # Use the imported function
         await callback_query.message.edit_text("Settings options:", reply_markup=settings_keyboard)
     else:
         await callback_query.answer("You do not have permission to access settings.", show_alert=True)
@@ -77,7 +70,7 @@ async def back_to_game_callback(client, callback_query):
             return
 
         # If there is an ongoing game, show the current game state
-        await callback_query.message.edit_text("You are back in the game!", reply_markup=inline_keyboard_markup)
+        await callback_query.message.edit_text("You are back in the game!", reply_markup=get_game_keyboard())
     except Exception as e:
         logging.error(f"Error retrieving game from database: {e}")
         await callback_query.message.edit_text("An error occurred while trying to return to the game.")
@@ -95,17 +88,9 @@ async def change_language_callback(client, callback_query):
     if not is_admin:
         await callback_query.answer("You do not have permission to access this setting.", show_alert=True)
         return
-
-    # Create language selection keyboard
-    language_keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("English 🇬🇧", callback_data="set_language_en")],
-            [InlineKeyboardButton("Tamil 🇮🇳", callback_data="set_language_ta")],
-            [InlineKeyboardButton("Hindi 🇮🇳", callback_data="set_language_hi")],
-            [InlineKeyboardButton("Back 🔙", callback_data="back_to_settings_language")],  # Back button
-        ]
-    )
-
+        
+    language_keyboard = get_language_keyboard()
+    
     await callback_query.message.edit_text("Select your language:", reply_markup=language_keyboard)
 
 @Client.on_callback_query(filters.regex("set_language_"))
@@ -143,16 +128,8 @@ async def change_game_mode_callback(client , callback_query):
         await callback_query.answer("You do not have permission to access this setting.", show_alert=True)
         return
 
-    # Create game mode selection keyboard
-    game_mode_keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("Easy 😌", callback_data="set_game_mode_easy")],
-            [InlineKeyboardButton("Hard 😤", callback_data="set_game_mode_hard")],
-            [InlineKeyboardButton("Adult 🔞", callback_data="set_game_mode_adult")],
-            [InlineKeyboardButton("Back 🔙", callback_data="back_to_settings_game_mode")],  # Back button
-        ]
-    )
-
+    game_mode_keyboard = get_game_mode_keyboard()
+    
     await callback_query.message.edit_text("Select your game mode:", reply_markup=game_mode_keyboard)
 
 @Client.on_callback_query(filters.regex("set_game_mode_"))
