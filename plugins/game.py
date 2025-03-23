@@ -86,7 +86,7 @@ async def check_answer(client, message, game, language):
                 )
                 
                 # Start a new game with the winner as the host
-                await new_game(client, message, language, game.get("game_mode"))
+                await new_game(client, message, language, game.get("game_mode"), winner_id)  # Pass winner_id
 
 @Client.on_message(filters.group & filters.command("game", CMD))
 async def game_command(client, message):
@@ -110,7 +110,7 @@ async def game_command(client, message):
         return
 
     game_mode = await db.get_group_game_mode(chat_id)
-    await new_game(client, message, language, game_mode)
+    await new_game(client, message, language, game_mode, message.from_user.id)  # Pass host_id
     await message.reply_text(await get_message(language, "new_game_started"))
 
 @Client.on_message(filters.group)
@@ -222,7 +222,7 @@ async def choose_leader_callback(client, callback_query):
 
     try:
         # Set the clicked user as the host
-        await new_game(client, callback_query.message, language, game_mode, user_id)  # Pass user_id as host
+        await new_game(client, callback_query.message, language, game_mode, user_id)  # Pass user_id
         await callback_query.answer(f"{callback_query.from_user.first_name} is now the leader! Starting the game...")
     except Exception as e:
         logging.error(f"Error starting new game for chat {chat_id}: {e}")
