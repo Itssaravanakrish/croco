@@ -86,11 +86,24 @@ async def handle_start_command(client, message):
 
 @Client.on_message(filters.command("settings"))
 async def settings_command(client, message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
+    if message.chat.type not in ["group", "supergroup"]:
+        # Prompt user to connect if in private chat
+        await message.reply_text("You need to connect to a group to change settings. Use /connect to connect.")
+        return
 
-    # Send settings options
+    # Send settings options if in a group
     await message.reply_text("Please choose an option:", reply_markup=settings_keyboard)
+
+@Client.on_message(filters.command("connect"))
+async def connect_command(client, message):
+    if message.chat.type == "private":
+        # In private chat, ask for group ID or link
+        await message.reply_text("Please provide the group ID or link to connect.")
+    else:
+        # In group chat, connect the user directly
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        await message.reply_text("You have been connected to this group.")
 
 @Client.on_callback_query(filters.regex("change_language"))
 async def change_language_callback(client, callback_query):
@@ -111,14 +124,20 @@ async def change_language_callback(client, callback_query):
 @Client.on_callback_query(filters.regex("set_language_"))
 async def set_language_callback(client, callback_query):
     new_language_str = callback_query.data.split("_")[-1]  # Get language as string
-    chat_id = callback_query.message.chat.id
+    user_id = str(callback_query.from_user.id)
 
-    try:
-        await db.set_chat_language(chat_id, new_language_str)  # Store language as string in DB
-        await callback_query.answer(f"Language changed to {new_language_str.upper()}!", show_alert=True)
-    except Exception as e:
-        logging.exception(f"Error setting language: {e}")
-        await callback_query.answer("An error occurred while setting the language. Please try again.", show_alert=True)
+    # Retrieve the connected chat ID for the user
+    connected_chat_id = await db.get_user_connected_chat(user_id)  # Assume this function retrieves the connected chat ID
+
+    if connected_chat_id:
+        try:
+            await db.set_chat_language(connected_chat_id, new_language_str)  # Store language as string in DB
+            await callback_query.answer(f"Language changed to {new_language_str.upper()}!", show_alert=True)
+        except Exception as e:
+            logging.exception(f"Error setting language: {e}")
+            await callback_query.answer("An error occurred while setting the language. Please try again.", show_alert=True)
+    else:
+        await callback_query.answer("You are not connected to any group. Please connect first using /connect.", show_alert=True)
 
 @Client.on_callback_query(filters.regex("change_game_mode"))
 async def change_game_mode_callback(client, callback_query):
@@ -139,19 +158,25 @@ async def change_game_mode_callback(client, callback_query):
 @Client.on_callback_query(filters.regex("set_game_mode_"))
 async def set_game_mode_callback(client, callback_query):
     new_game_mode_str = callback_query.data.split("_")[-1]  # Get the mode string (e.g., "easy")
-    chat_id = callback_query.message.chat.id
+    user_id = str(callback_query.from_user.id)
 
-    try:
-        await db.set_group_game_mode(chat_id, [new_game_mode_str])  # Store as a list in DB
-        await callback_query.answer(f"Game mode changed to {new_game_mode_str.capitalize()}!", show_alert=True)
-    except Exception as e:
-        logging.exception(f"Error setting game mode: {e}")
-        await callback_query.answer("An error occurred while setting the game mode. Please try again.", show_alert=True)
+    # Retrieve the connected chat ID for the user
+    connected_chat_id = await db.get_user_connected_chat(user_id)  # Assume this function retrieves the connected chat ID
 
-@Client.on_callback_query(filters.regex("back_"))
-async def back_callback(client, callback_query):
+    if connected_chat_id:
+        try:
+            await db.set_group_game_mode(connected_chat_id, [new_game_mode_str])  # Store as a list in DB
+            await callback_query.answer(f"Game mode changed to {new_game_mode_str.capitalize()}!", show_alert=True)
+        except Exception as e:
+            logging.exception(f"Error setting game mode: {e}")
+            await callback_query.answer("An error occurred while setting the game mode. Please try again.", show_alert=True)
+    else:
+        await callback_query.answer("You are not connected to any group. Please connect first using /connect.", show_alert=True)
+
+@Client.on_callback_query(filters.regex("back_settings"))
+async def back_settings_callback(client, callback_query):
     await callback_query.answer()  # Acknowledge button press
-    await settings_command(client, callback_query.message)  # Go back to settings options
+    await settings_command(client, callback_query.message)
 
 @Client.on_callback_query(filters.regex("close_settings"))
 async def close_settings_callback(client, callback_query):
