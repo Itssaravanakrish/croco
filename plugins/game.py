@@ -18,6 +18,9 @@ CMD = ["/", "."]
 GAME_TIMEOUT = 300
 
 async def new_game(client, message, language, game_mode: str, host_id: int) -> bool:
+    global previous_answers
+    previous_answers = set()
+    
     try:
         if isinstance(game_mode, list):
             game_mode = game_mode[0]
@@ -60,6 +63,9 @@ async def new_game(client, message, language, game_mode: str, host_id: int) -> b
         await message.reply_text(await get_message(language.value, "database_error"))
         return False
 
+# Initialize a set to keep track of previous answers
+previous_answers = set()
+
 async def check_answer(client, message, game, language):
     current_word = game.get("word")
     host_id = game.get("host", {}).get("id")
@@ -67,6 +73,13 @@ async def check_answer(client, message, game, language):
     user_id = message.from_user.id
 
     if message.text:
+        # Check if the answer has already been provided
+        if message.text.lower() in previous_answers:
+            return  # Skip processing as the answer is a duplicate
+
+        # Add the new answer to the set of previous answers
+        previous_answers.add(message.text.lower())
+
         if message.text.lower() == current_word.lower():
             winner_id = message.from_user.id
             winner_name = message.from_user.first_name
@@ -83,7 +96,7 @@ async def check_answer(client, message, game, language):
                 )
                 
                 # Start a new game with the winner as the host
-                await new_game(client, message, language, game.get("game_mode"), winner_id)  # Pass winner_id
+                await new_game(client, message, language, game.get("game_mode"), winner_id)
 
 @Client.on_message(filters.group & filters.command("game", CMD))
 async def game_command(client, message):
@@ -241,3 +254,22 @@ async def handle_end_game(client, message, language):
     except Exception as e:
         logging.error(f"Error removing game from database: {e}")
         await message.reply_text(await get_message(language, "database_error"))
+
+@Client.on_message(filters.group & filters.command("end"))
+async def end_game_command(client, message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    # Check if the user is an admin
+    if not await is_user_admin(client, chat_id, user_id):
+        await message.reply_text("You do not have permission to end the game.")
+        return
+
+    # Retrieve the ongoing game
+    game = await db.get_game(chat_id)
+    if not game:
+        await message.reply_text("There is no ongoing game to end.")
+        return
+
+    # Call the function to handle ending the game
+    await handle_end_game(client, message, Language.EN)  # You can pass the appropriate language here
