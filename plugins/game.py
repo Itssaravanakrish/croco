@@ -255,7 +255,7 @@ async def handle_end_game(client, message, language):
         logging.error(f"Error removing game from database: {e}")
         await message.reply_text(await get_message(language, "database_error"))
 
-@Client.on_message(filters.group & filters.command("end"))
+@Client.on_message(filters.group & filters.command("end", CMD))
 async def end_game_command(client, message):
     chat_id = message.chat.id
     user_id = message.from_user.id
